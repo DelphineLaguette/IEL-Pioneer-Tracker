@@ -163,6 +163,7 @@ export default function StartingPointForm() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!leader) return;
     const sp: StartingPoint = {
       ...form,
       id: existing?.id ?? crypto.randomUUID(),
