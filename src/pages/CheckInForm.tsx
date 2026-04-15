@@ -5,6 +5,10 @@ import { getLeader } from '../data/leaders';
 import { PRINCIPLES } from '../data/principles';
 import type { CheckIn } from '../types';
 
+// IBL Energy brand colors
+const IBL_NAVY = '#002060';
+const IBL_CYAN  = '#00D0DA';
+
 // ── Reusable inputs ────────────────────────────────────────────────────────────
 
 function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
@@ -26,7 +30,7 @@ function TextInput({ value, onChange, placeholder }: { value: string; onChange: 
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent"
     />
   );
 }
@@ -38,7 +42,7 @@ function TextArea({ value, onChange, placeholder, rows = 3 }: { value: string; o
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       rows={rows}
-      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent resize-none"
     />
   );
 }
@@ -60,18 +64,19 @@ function RatingButtons({ value, onChange }: { value: number; onChange: (n: numbe
             key={n}
             type="button"
             onClick={() => onChange(n)}
-            className={`w-10 h-10 rounded-full font-bold text-sm transition-all flex-shrink-0 ${
+            className="w-10 h-10 rounded-full font-bold text-sm transition-all flex-shrink-0"
+            style={
               value === n
-                ? 'bg-indigo-600 text-white shadow-md scale-110'
-                : 'bg-gray-100 text-gray-600 hover:bg-indigo-100 hover:text-indigo-700'
-            }`}
+                ? { backgroundColor: IBL_NAVY, color: '#fff', boxShadow: '0 4px 6px -1px rgba(0,32,96,0.3)', transform: 'scale(1.1)' }
+                : { backgroundColor: '#f3f4f6', color: '#4b5563' }
+            }
           >
             {n}
           </button>
         ))}
       </div>
       {value > 0 && (
-        <p className="text-xs text-indigo-600 font-medium">{RATING_SCALE_LABELS[value]}</p>
+        <p className="text-xs font-medium" style={{ color: IBL_CYAN }}>{RATING_SCALE_LABELS[value]}</p>
       )}
     </div>
   );
@@ -80,7 +85,10 @@ function RatingButtons({ value, onChange }: { value: number; onChange: (n: numbe
 function SectionHeader({ number, title }: { number: number; title: string }) {
   return (
     <div className="flex items-center gap-3 mb-5">
-      <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+      <div
+        className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+        style={{ backgroundColor: IBL_NAVY }}
+      >
         {number}
       </div>
       <h2 className="text-base font-semibold text-gray-900">{title}</h2>
@@ -136,7 +144,7 @@ export default function CheckInForm() {
         <button
           onClick={() => navigate(`/leaders/${leader.id}/starting-point`)}
           className="px-4 py-2 text-white text-sm font-medium rounded-lg"
-          style={{ backgroundColor: leader.color }}
+          style={{ backgroundColor: IBL_NAVY }}
         >
           Complete Reflection
         </button>
@@ -167,7 +175,7 @@ export default function CheckInForm() {
         <div className="flex items-center gap-3 mb-1">
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm"
-            style={{ backgroundColor: leader.color }}
+            style={{ backgroundColor: IBL_NAVY }}
           >
             {leader.initials}
           </div>
@@ -215,7 +223,7 @@ export default function CheckInForm() {
                 value={form.selectedPrinciple}
                 onChange={e => set('selectedPrinciple', e.target.value)}
                 required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent bg-white"
               >
                 <option value="">Select a principle...</option>
                 {PRINCIPLES.map(p => (
@@ -328,7 +336,7 @@ export default function CheckInForm() {
                     onClick={() => set('progressVersusLastMonth', opt.value as CheckIn['progressVersusLastMonth'])}
                     className={`flex-1 py-2 px-3 rounded-lg border text-xs font-semibold transition-all ${
                       form.progressVersusLastMonth === opt.value
-                        ? opt.colors + ' ring-2 ring-offset-1 ring-indigo-400'
+                        ? opt.colors + ' ring-2 ring-offset-1 ring-[#00D0DA]'
                         : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
                     }`}
                   >
@@ -351,9 +359,10 @@ export default function CheckInForm() {
                     onClick={() => set('supportNeeded', opt.value)}
                     className={`px-6 py-2 rounded-lg border text-sm font-medium transition-all ${
                       form.supportNeeded === opt.value
-                        ? 'bg-indigo-600 border-indigo-600 text-white'
+                        ? 'border-transparent text-white'
                         : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
                     }`}
+                    style={form.supportNeeded === opt.value ? { backgroundColor: IBL_NAVY } : undefined}
                   >
                     {opt.label}
                   </button>
@@ -399,7 +408,7 @@ export default function CheckInForm() {
           <button
             type="submit"
             className="flex-1 py-2.5 text-white text-sm font-semibold rounded-lg transition-colors"
-            style={{ backgroundColor: leader.color }}
+            style={{ backgroundColor: IBL_NAVY }}
           >
             Submit Check-In
           </button>

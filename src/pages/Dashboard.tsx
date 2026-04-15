@@ -4,7 +4,19 @@ import { LEADERS } from '../data/leaders';
 import { PRINCIPLES } from '../data/principles';
 import type { StartingPoint, PrincipleKey } from '../types';
 
-const RATING_COLORS = ['', 'bg-red-100 text-red-700', 'bg-orange-100 text-orange-700', 'bg-yellow-100 text-yellow-700', 'bg-blue-100 text-blue-700', 'bg-green-100 text-green-700'];
+// IBL Energy brand colors
+const IBL_NAVY = '#002060';
+const IBL_CYAN  = '#00D0DA';
+const IBL_PINK  = '#FF51A1';
+
+const RATING_COLORS = [
+  '',
+  'bg-red-100 text-red-700',
+  'bg-orange-100 text-orange-700',
+  'bg-yellow-100 text-yellow-700',
+  'bg-blue-100 text-blue-700',
+  'bg-green-100 text-green-700',
+];
 
 function PrinciplePill({ sp, principleKey, label }: { sp: StartingPoint; principleKey: PrincipleKey; label: string }) {
   const rating = sp[principleKey]?.rating ?? 0;
@@ -31,14 +43,16 @@ export default function Dashboard() {
     <div>
       {/* Page header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Leadership Development Dashboard</h1>
+        <h1 className="text-2xl font-bold" style={{ color: IBL_NAVY }}>
+          Leadership Development Dashboard
+        </h1>
         <p className="text-gray-500 mt-1">Tracking the pioneering journeys of our IEL leaders</p>
         <div className="mt-3 flex items-center gap-6 text-sm">
           <span className="text-gray-600">
-            <span className="font-semibold text-gray-900">{completedCount}</span> of {LEADERS.length} leaders started
+            <span className="font-semibold" style={{ color: IBL_NAVY }}>{completedCount}</span> of {LEADERS.length} leaders started
           </span>
           <span className="text-gray-600">
-            <span className="font-semibold text-gray-900">{data.checkIns.length}</span> total check-ins submitted
+            <span className="font-semibold" style={{ color: IBL_NAVY }}>{data.checkIns.length}</span> total check-ins submitted
           </span>
         </div>
       </div>
@@ -72,15 +86,15 @@ export default function Dashboard() {
               key={leader.id}
               className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
             >
-              {/* Colour stripe */}
-              <div className="h-1.5" style={{ backgroundColor: leader.color }} />
+              {/* IBL Navy stripe */}
+              <div className="h-1.5" style={{ backgroundColor: IBL_NAVY }} />
 
               <div className="p-5">
                 {/* Header row */}
                 <div className="flex items-center gap-3 mb-4">
                   <div
                     className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                    style={{ backgroundColor: leader.color }}
+                    style={{ backgroundColor: IBL_NAVY }}
                   >
                     {leader.initials}
                   </div>
@@ -94,7 +108,10 @@ export default function Dashboard() {
                   </div>
                   <div className="ml-auto flex-shrink-0">
                     {sp ? (
-                      <span className="px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 text-xs font-medium rounded-full">
+                      <span
+                        className="px-2 py-0.5 text-white text-xs font-medium rounded-full"
+                        style={{ backgroundColor: IBL_CYAN }}
+                      >
                         Started
                       </span>
                     ) : (
@@ -147,7 +164,7 @@ export default function Dashboard() {
                     <Link
                       to={`/leaders/${leader.id}/starting-point`}
                       className="flex-1 text-center py-2 px-3 text-white text-sm font-medium rounded-lg transition-colors"
-                      style={{ backgroundColor: leader.color }}
+                      style={{ backgroundColor: IBL_NAVY }}
                     >
                       Start Reflection
                     </Link>
@@ -155,7 +172,7 @@ export default function Dashboard() {
                     <Link
                       to={`/leaders/${leader.id}/checkin/new`}
                       className="flex-1 text-center py-2 px-3 text-white text-sm font-medium rounded-lg transition-colors"
-                      style={{ backgroundColor: leader.color }}
+                      style={{ backgroundColor: IBL_CYAN, color: IBL_NAVY }}
                     >
                       Add Check-In
                     </Link>

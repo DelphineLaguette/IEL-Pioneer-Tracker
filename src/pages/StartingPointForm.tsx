@@ -5,6 +5,10 @@ import { getLeader } from '../data/leaders';
 import { PRINCIPLES } from '../data/principles';
 import type { StartingPoint, PrincipleKey, PrincipleRating } from '../types';
 
+// IBL Energy brand colors
+const IBL_NAVY = '#002060';
+const IBL_CYAN  = '#00D0DA';
+
 // ── Reusable inputs ────────────────────────────────────────────────────────────
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
@@ -25,7 +29,7 @@ function TextInput({ value, onChange, placeholder }: { value: string; onChange: 
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent"
     />
   );
 }
@@ -37,7 +41,7 @@ function TextArea({ value, onChange, placeholder, rows = 3 }: { value: string; o
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       rows={rows}
-      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent resize-none"
     />
   );
 }
@@ -67,18 +71,19 @@ function RatingButtons({ value, onChange, scaleLabels }: { value: number; onChan
             key={n}
             type="button"
             onClick={() => onChange(n)}
-            className={`w-10 h-10 rounded-full font-bold text-sm transition-all flex-shrink-0 ${
+            className="w-10 h-10 rounded-full font-bold text-sm transition-all flex-shrink-0"
+            style={
               value === n
-                ? 'bg-indigo-600 text-white shadow-md scale-110'
-                : 'bg-gray-100 text-gray-600 hover:bg-indigo-100 hover:text-indigo-700'
-            }`}
+                ? { backgroundColor: IBL_NAVY, color: '#fff', boxShadow: '0 4px 6px -1px rgba(0,32,96,0.3)', transform: 'scale(1.1)' }
+                : { backgroundColor: '#f3f4f6', color: '#4b5563' }
+            }
           >
             {n}
           </button>
         ))}
       </div>
       {value > 0 && (
-        <p className="text-xs text-indigo-600 font-medium">{scaleLabels[value]}</p>
+        <p className="text-xs font-medium" style={{ color: IBL_CYAN }}>{scaleLabels[value]}</p>
       )}
     </div>
   );
@@ -87,7 +92,10 @@ function RatingButtons({ value, onChange, scaleLabels }: { value: number; onChan
 function SectionHeader({ number, title }: { number: number; title: string }) {
   return (
     <div className="flex items-center gap-3 mb-5">
-      <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+      <div
+        className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+        style={{ backgroundColor: IBL_NAVY }}
+      >
         {number}
       </div>
       <h2 className="text-base font-semibold text-gray-900">{title}</h2>
@@ -172,7 +180,7 @@ export default function StartingPointForm() {
         <div className="flex items-center gap-3 mb-1">
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm"
-            style={{ backgroundColor: leader.color }}
+            style={{ backgroundColor: IBL_NAVY }}
           >
             {leader.initials}
           </div>
@@ -193,7 +201,7 @@ export default function StartingPointForm() {
       </div>
 
       {/* Scale legend */}
-      <div className="mb-6 p-4 bg-indigo-50 rounded-xl border border-indigo-100 text-xs text-indigo-800">
+      <div className="mb-6 p-4 rounded-xl border text-xs" style={{ backgroundColor: '#E6FAFB', borderColor: IBL_CYAN, color: IBL_NAVY }}>
         <p className="font-semibold mb-1">Self-rating scale for principles:</p>
         <p>1 = Rarely true of me today &nbsp;·&nbsp; 2 = Sometimes true, but inconsistent &nbsp;·&nbsp; 3 = Often true in my leadership &nbsp;·&nbsp; 4 = Strongly present and visible &nbsp;·&nbsp; 5 = A clear strength, consistently demonstrated</p>
       </div>
@@ -280,7 +288,7 @@ export default function StartingPointForm() {
                 <div className="flex items-start gap-3 mb-4">
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0 mt-0.5"
-                    style={{ backgroundColor: leader.color }}
+                    style={{ backgroundColor: IBL_NAVY }}
                   >
                     {p.number}
                   </div>
@@ -364,7 +372,7 @@ export default function StartingPointForm() {
           <button
             type="submit"
             className="flex-1 py-2.5 text-white text-sm font-semibold rounded-lg transition-colors"
-            style={{ backgroundColor: leader.color }}
+            style={{ backgroundColor: IBL_NAVY }}
           >
             {existing ? 'Update Reflection' : 'Submit Starting Reflection'}
           </button>

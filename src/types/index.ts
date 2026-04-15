@@ -87,6 +87,5 @@ export interface TrackerData {
 export interface Leader {
   id: string;
   name: string;
-  color: string;
   initials: string;
 }

@@ -1,5 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 
+const IBL_NAVY = '#002060';
+
 export default function Navbar() {
   const location = useLocation();
   const isHome = location.pathname === '/';
@@ -19,11 +21,14 @@ export default function Navbar() {
           </Link>
         )}
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: IBL_NAVY }}
+          >
             <span className="text-white font-bold text-xs">IEL</span>
           </div>
           <div>
-            <p className="font-semibold text-gray-900 leading-none">Pioneer Tracker</p>
+            <p className="font-semibold leading-none" style={{ color: IBL_NAVY }}>Pioneer Tracker</p>
             <p className="text-xs text-gray-400 mt-0.5">Leadership Development Journey</p>
           </div>
         </Link>

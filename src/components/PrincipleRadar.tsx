@@ -9,12 +9,14 @@ import {
 import { PRINCIPLES } from '../data/principles';
 import type { StartingPoint, PrincipleKey } from '../types';
 
+// IBL Energy brand colors
+const IBL_CYAN = '#00D0DA';
+
 interface Props {
   startingPoint: StartingPoint;
-  color?: string;
 }
 
-export default function PrincipleRadar({ startingPoint, color = '#4F46E5' }: Props) {
+export default function PrincipleRadar({ startingPoint }: Props) {
   const data = PRINCIPLES.map(p => ({
     label: `P${p.number}`,
     fullTitle: p.shortTitle,
@@ -33,11 +35,11 @@ export default function PrincipleRadar({ startingPoint, color = '#4F46E5' }: Pro
         <Radar
           name="Self-Rating"
           dataKey="rating"
-          stroke={color}
-          fill={color}
+          stroke={IBL_CYAN}
+          fill={IBL_CYAN}
           fillOpacity={0.2}
           strokeWidth={2}
-          dot={{ r: 4, fill: color }}
+          dot={{ r: 4, fill: IBL_CYAN }}
         />
         <Tooltip
           formatter={(value: number) => [`${value} / 5`, 'Self-Rating']}
