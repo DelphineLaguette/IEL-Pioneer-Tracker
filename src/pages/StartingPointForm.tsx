@@ -210,7 +210,7 @@ export default function StartingPointForm() {
       <form onSubmit={handleSubmit} className="space-y-8">
 
         {/* ── Section 1: Your Details ── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionHeader number={1} title="Your Details" />
           <div className="space-y-4">
             <div className="p-3 bg-gray-50 rounded-lg">
@@ -227,7 +227,7 @@ export default function StartingPointForm() {
         </div>
 
         {/* ── Section 2: Leadership Inspiration ── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionHeader number={2} title="Leadership Inspiration" />
           <div className="space-y-4">
             <Field label="Three leadership qualities I admire">
@@ -248,7 +248,7 @@ export default function StartingPointForm() {
         </div>
 
         {/* ── Section 3: My Team Today ── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionHeader number={3} title="My Team Today" />
           <p className="text-xs text-gray-500 mb-5">Rate from 1 (Not at all) to 5 (Completely)</p>
           <div className="space-y-6">
@@ -280,7 +280,7 @@ export default function StartingPointForm() {
         </div>
 
         {/* ── Section 4: Principle Self-Assessments ── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionHeader number={4} title="Principle Self-Assessments" />
           <p className="text-xs text-gray-500 mb-6">For each principle, rate where you believe you are today and provide brief evidence of what you currently do in practice.</p>
           <div className="space-y-8">
@@ -327,7 +327,7 @@ export default function StartingPointForm() {
         </div>
 
         {/* ── Section 5: Summary ── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionHeader number={5} title="Summary & Intentions" />
           <div className="space-y-4">
             <Field label="Strongest principle today">

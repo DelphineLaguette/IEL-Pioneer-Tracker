@@ -27,16 +27,19 @@ const PERCEPTION_LABELS: Record<number, string> = {
 };
 
 function RatingBadge({ rating }: { rating: number }) {
-  const colors = [
-    '',
-    'bg-red-100 text-red-700',
-    'bg-orange-100 text-orange-700',
-    'bg-yellow-100 text-yellow-700',
-    'bg-blue-100 text-blue-700',
-    'bg-green-100 text-green-700',
-  ];
+  const styles: Record<number, { bg: string; color: string }> = {
+    1: { bg: '#fee2e2', color: '#b91c1c' },
+    2: { bg: '#ffedd5', color: '#c2410c' },
+    3: { bg: '#fef9c3', color: '#a16207' },
+    4: { bg: '#dbeafe', color: '#1d4ed8' },
+    5: { bg: '#dcfce7', color: '#15803d' },
+  };
+  const s = styles[rating] ?? { bg: '#f3f4f6', color: '#6b7280' };
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${colors[rating] ?? 'bg-gray-100 text-gray-500'}`}>
+    <span
+      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
+      style={{ backgroundColor: s.bg, color: s.color }}
+    >
       {rating}/5
     </span>
   );
@@ -44,9 +47,9 @@ function RatingBadge({ rating }: { rating: number }) {
 
 function ProgressBar({ value, max = 5 }: { value: number; max?: number }) {
   return (
-    <div className="w-full bg-gray-100 rounded-full h-1.5">
+    <div className="w-full bg-gray-100 rounded-full h-2">
       <div
-        className="h-1.5 rounded-full transition-all"
+        className="h-2 rounded-full transition-all duration-500"
         style={{ width: `${(value / max) * 100}%`, backgroundColor: IBL_CYAN }}
       />
     </div>
@@ -57,53 +60,65 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function CheckInCard({ ci }: { ci: CheckIn }) {
+function CheckInCard({ ci, index }: { ci: CheckIn; index: number }) {
   const principle = PRINCIPLES.find(p => p.id === ci.selectedPrinciple);
-  const progressColors = {
-    improved: 'text-green-600 bg-green-50',
-    same:     'text-yellow-600 bg-yellow-50',
-    declined: 'text-red-600 bg-red-50',
+  const progressMap = {
+    improved: { label: '↑ Improved',         bg: '#dcfce7', fg: '#15803d' },
+    same:     { label: '→ About the same',    bg: '#fef9c3', fg: '#a16207' },
+    declined: { label: '↓ Need to improve',   bg: '#fee2e2', fg: '#b91c1c' },
   };
+  const progress = progressMap[ci.progressVersusLastMonth];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div>
-          <p className="text-xs text-gray-400 font-medium">{ci.month}</p>
-          <p className="font-semibold text-gray-900 mt-0.5">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden
+                    hover:shadow-md transition-all duration-200">
+      {/* Card top bar */}
+      <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100"
+           style={{ backgroundColor: '#f8fafc' }}>
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+          style={{ backgroundColor: IBL_NAVY, fontSize: 12 }}
+        >
+          {index + 1}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{ci.month}</p>
+          <p className="font-semibold text-gray-900 text-sm truncate">
             {principle ? `P${principle.number} — ${principle.shortTitle}` : ci.selectedPrinciple}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <RatingBadge rating={ci.selfRating} />
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${progressColors[ci.progressVersusLastMonth]}`}>
-            {ci.progressVersusLastMonth === 'improved' ? '↑ Improved' : ci.progressVersusLastMonth === 'declined' ? '↓ Declined' : '→ Same'}
+          <span
+            className="text-xs font-semibold px-2.5 py-1 rounded-full"
+            style={{ backgroundColor: progress.bg, color: progress.fg }}
+          >
+            {progress.label}
           </span>
         </div>
       </div>
 
-      <div className="space-y-2 text-sm">
+      <div className="p-5 space-y-3">
         {ci.whatDidWell && (
-          <div>
-            <span className="font-medium text-gray-600">What went well: </span>
-            <span className="text-gray-700">{ci.whatDidWell}</span>
+          <div className="p-3 rounded-xl" style={{ backgroundColor: '#f0fdf4' }}>
+            <p className="text-xs font-semibold mb-0.5" style={{ color: '#15803d' }}>What went well</p>
+            <p className="text-sm text-gray-700">{ci.whatDidWell}</p>
           </div>
         )}
         {ci.focusForNext30Days && (
-          <div>
-            <span className="font-medium text-gray-600">Next focus: </span>
-            <span className="text-gray-700">{ci.focusForNext30Days}</span>
+          <div className="p-3 rounded-xl" style={{ backgroundColor: '#eff6ff' }}>
+            <p className="text-xs font-semibold mb-0.5" style={{ color: '#1d4ed8' }}>Next 30-day focus</p>
+            <p className="text-sm text-gray-700">{ci.focusForNext30Days}</p>
           </div>
         )}
         {ci.supportNeeded && ci.typeOfSupportNeeded && (
-          <div className="mt-2 p-2 rounded-lg text-xs" style={{ backgroundColor: '#FFF0F7', borderColor: IBL_PINK, border: '1px solid' }}>
-            <span className="font-semibold" style={{ color: IBL_PINK }}>Support requested: </span>
-            <span className="text-gray-700">{ci.typeOfSupportNeeded}</span>
+          <div className="p-3 rounded-xl border" style={{ backgroundColor: '#fff0f7', borderColor: IBL_PINK }}>
+            <p className="text-xs font-semibold mb-0.5" style={{ color: IBL_PINK }}>Support requested</p>
+            <p className="text-sm text-gray-700">{ci.typeOfSupportNeeded}</p>
           </div>
         )}
+        <p className="text-xs text-gray-400 pt-1">Submitted {formatDate(ci.submittedAt)}</p>
       </div>
-
-      <p className="text-xs text-gray-400 mt-3">Submitted {formatDate(ci.submittedAt)}</p>
     </div>
   );
 }
@@ -130,35 +145,57 @@ export default function LeaderJourney() {
 
   return (
     <div className="space-y-6">
-      {/* Leader header */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="h-2" style={{ backgroundColor: IBL_NAVY }} />
-        <div className="p-6 flex items-center gap-4">
+      {/* Leader hero header */}
+      <div
+        className="relative rounded-2xl overflow-hidden"
+        style={{ background: `linear-gradient(135deg, ${IBL_NAVY} 0%, #001840 55%, #002e80 100%)` }}
+      >
+        {/* Decorative circles */}
+        <div className="absolute rounded-full opacity-10 pointer-events-none"
+          style={{ width: 240, height: 240, backgroundColor: IBL_CYAN, top: -60, right: -40 }} />
+        <div className="absolute rounded-full opacity-10 pointer-events-none"
+          style={{ width: 100, height: 100, backgroundColor: IBL_PINK, bottom: -20, right: 160 }} />
+
+        <div className="relative z-10 p-6 flex items-center gap-5">
+          {/* Avatar */}
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0"
-            style={{ backgroundColor: IBL_NAVY }}
+            className="w-20 h-20 rounded-2xl flex items-center justify-center text-white font-extrabold text-2xl
+                       flex-shrink-0 shadow-xl border-2 border-white/20"
+            style={{ background: `linear-gradient(135deg, ${IBL_CYAN}50, ${IBL_NAVY})` }}
           >
             {leader.initials}
           </div>
+
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold" style={{ color: IBL_NAVY }}>{leader.name}</h1>
-            {sp && <p className="text-sm text-gray-500">{sp.team} · {sp.email}</p>}
-            <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">{leader.name}</h1>
+            {sp && (
+              <p className="text-sm mt-0.5" style={{ color: IBL_CYAN, opacity: 0.9 }}>
+                {sp.team} · {sp.email}
+              </p>
+            )}
+            <div className="flex items-center gap-3 mt-3 text-sm">
               {sp ? (
-                <span className="font-medium" style={{ color: IBL_CYAN }}>✓ Starting reflection complete</span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold"
+                  style={{ backgroundColor: IBL_CYAN, color: IBL_NAVY }}>
+                  ✓ Reflection complete
+                </span>
               ) : (
-                <span className="text-gray-400">No starting reflection yet</span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/20 text-white/70">
+                  Not yet started
+                </span>
               )}
-              <span>·</span>
-              <span>{checkIns.length} check-in{checkIns.length !== 1 ? 's' : ''}</span>
+              <span className="text-white/50 text-xs">
+                {checkIns.length} check-in{checkIns.length !== 1 ? 's' : ''}
+              </span>
             </div>
           </div>
+
           <div className="flex flex-col gap-2 flex-shrink-0">
             {!sp ? (
               <button
                 onClick={() => navigate(`/leaders/${leader.id}/starting-point`)}
-                className="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors"
-                style={{ backgroundColor: IBL_NAVY }}
+                className="px-5 py-2.5 text-sm font-bold rounded-xl transition-all hover:opacity-90 active:scale-95"
+                style={{ backgroundColor: IBL_CYAN, color: IBL_NAVY }}
               >
                 Complete Reflection
               </button>
@@ -166,14 +203,14 @@ export default function LeaderJourney() {
               <>
                 <button
                   onClick={() => navigate(`/leaders/${leader.id}/checkin/new`)}
-                  className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                  className="px-5 py-2.5 text-sm font-bold rounded-xl transition-all hover:opacity-90 active:scale-95"
                   style={{ backgroundColor: IBL_CYAN, color: IBL_NAVY }}
                 >
-                  Add Check-In
+                  + Add Check-In
                 </button>
                 <button
                   onClick={() => navigate(`/leaders/${leader.id}/starting-point`)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+                  className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-xl transition-all"
                 >
                   Edit Reflection
                 </button>
@@ -181,20 +218,22 @@ export default function LeaderJourney() {
             )}
           </div>
         </div>
+
+        <div className="h-1 w-full" style={{ backgroundColor: IBL_CYAN }} />
       </div>
 
       {sp && (
         <>
           {/* Radar + Team perception */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-              <h2 className="font-semibold text-gray-900 mb-1">Principle Self-Ratings</h2>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h2 className="font-bold text-gray-900 mb-0.5">Principle Self-Ratings</h2>
               <p className="text-xs text-gray-400 mb-3">Starting point reflection</p>
               <PrincipleRadar startingPoint={sp} />
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-              <h2 className="font-semibold text-gray-900 mb-1">Team Perception</h2>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h2 className="font-bold text-gray-900 mb-0.5">Team Perception</h2>
               <p className="text-xs text-gray-400 mb-4">How the leader perceives their team's experience</p>
               <div className="space-y-3">
                 {[
@@ -224,7 +263,7 @@ export default function LeaderJourney() {
           </div>
 
           {/* Principle deep-dive */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h2 className="font-semibold text-gray-900 mb-4">Principle Self-Assessment</h2>
             <div className="space-y-4">
               {PRINCIPLES.map(p => {
@@ -255,7 +294,7 @@ export default function LeaderJourney() {
           </div>
 
           {/* Summary */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h2 className="font-semibold text-gray-900 mb-4">Summary & Intentions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               {[
@@ -279,7 +318,7 @@ export default function LeaderJourney() {
 
           {/* Leadership inspiration */}
           {(sp.leadershipQualities || sp.behavioursAdmired) && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <h2 className="font-semibold text-gray-900 mb-4">Leadership Inspiration</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 {sp.leadershipQualities && (
@@ -323,8 +362,8 @@ export default function LeaderJourney() {
           </div>
         ) : (
           <div className="space-y-4">
-            {checkIns.map(ci => (
-              <CheckInCard key={ci.id} ci={ci} />
+            {checkIns.map((ci, idx) => (
+              <CheckInCard key={ci.id} ci={ci} index={idx} />
             ))}
           </div>
         )}

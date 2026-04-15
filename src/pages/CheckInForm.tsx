@@ -192,7 +192,7 @@ export default function CheckInForm() {
       <form onSubmit={handleSubmit} className="space-y-8">
 
         {/* ── Section 1: About This Month ── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionHeader number={1} title="About This Month" />
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -215,7 +215,7 @@ export default function CheckInForm() {
         </div>
 
         {/* ── Section 2: This Month's Focus ── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionHeader number={2} title="This Month's Focus" />
           <div className="space-y-4">
             <Field label="Selected leadership principle" required>
@@ -267,7 +267,7 @@ export default function CheckInForm() {
         </div>
 
         {/* ── Section 3: Reflection on This Month ── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionHeader number={3} title="Reflection on This Month" />
           <div className="space-y-4">
             <Field label="What I did well this month">
@@ -303,7 +303,7 @@ export default function CheckInForm() {
         </div>
 
         {/* ── Section 4: Feedback & Progress ── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionHeader number={4} title="Feedback & Progress" />
           <div className="space-y-5">
             <Field label="Feedback from team">
@@ -384,7 +384,7 @@ export default function CheckInForm() {
         </div>
 
         {/* ── Section 5: Looking Forward ── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionHeader number={5} title="Looking Forward" />
           <Field label="Focus for next 30 days">
             <TextArea
