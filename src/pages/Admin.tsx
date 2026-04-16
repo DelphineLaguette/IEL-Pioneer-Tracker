@@ -345,9 +345,8 @@ function LeaderRow({
 
 export default function Admin() {
   const { data } = useStore();
-  const [filterLeader,    setFilterLeader]    = useState('');
-  const [filterPrinciple, setFilterPrinciple] = useState('');
-  const [filterSupport,   setFilterSupport]   = useState(false);
+  const [filterLeader,  setFilterLeader]  = useState('');
+  const [filterSupport, setFilterSupport] = useState(false);
 
   // ── Overview stats ──────────────────────────────────────────────────────────
   const completedReflections = LEADERS.filter(l =>
@@ -374,14 +373,13 @@ export default function Admin() {
   // ── Filtered check-ins ──────────────────────────────────────────────────────
   const filtered = data.checkIns
     .filter(ci => {
-      if (filterLeader    && ci.leaderId           !== filterLeader)    return false;
-      if (filterPrinciple && ci.selectedPrinciple  !== filterPrinciple) return false;
-      if (filterSupport   && !ci.supportNeeded)                         return false;
+      if (filterLeader  && ci.leaderId !== filterLeader) return false;
+      if (filterSupport && !ci.supportNeeded)            return false;
       return true;
     })
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
 
-  const hasFilters = filterLeader || filterPrinciple || filterSupport;
+  const hasFilters = filterLeader || filterSupport;
 
   return (
     <div className="space-y-6">
@@ -583,18 +581,6 @@ export default function Admin() {
               {LEADERS.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
 
-            <select
-              value={filterPrinciple}
-              onChange={e => setFilterPrinciple(e.target.value)}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white
-                         focus:outline-none focus:ring-2 focus:ring-[#00D0DA]"
-            >
-              <option value="">All principles</option>
-              {PRINCIPLES.map(p => (
-                <option key={p.id} value={p.id}>P{p.number} — {p.shortTitle}</option>
-              ))}
-            </select>
-
             <button
               type="button"
               onClick={() => setFilterSupport(v => !v)}
@@ -609,11 +595,7 @@ export default function Admin() {
             {hasFilters && (
               <button
                 type="button"
-                onClick={() => {
-                  setFilterLeader('');
-                  setFilterPrinciple('');
-                  setFilterSupport(false);
-                }}
+                onClick={() => { setFilterLeader(''); setFilterSupport(false); }}
                 className="px-4 py-2 rounded-xl text-sm text-gray-400 hover:text-gray-600 transition-colors"
               >
                 Clear filters
