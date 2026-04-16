@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import LeaderJourney from './pages/LeaderJourney';
 import StartingPointForm from './pages/StartingPointForm';
 import CheckInForm from './pages/CheckInForm';
+import Admin from './pages/Admin';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
             <Route path="/leaders/:leaderId" element={<LeaderJourney />} />
             <Route path="/leaders/:leaderId/starting-point" element={<StartingPointForm />} />
             <Route path="/leaders/:leaderId/checkin/new" element={<CheckInForm />} />
+            <Route path="/admin" element={<Admin />} />
           </Routes>
         </main>
       </div>
