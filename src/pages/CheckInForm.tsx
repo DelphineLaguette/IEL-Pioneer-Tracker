@@ -121,6 +121,7 @@ function buildDefault(email: string, team: string): Omit<CheckIn, 'id' | 'leader
     supportNeeded: false,
     typeOfSupportNeeded: '',
     focusForNext30Days: '',
+    nextCheckInDate: '',
   };
 }
 
@@ -386,14 +387,24 @@ export default function CheckInForm() {
         {/* ── Section 5: Looking Forward ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionHeader number={5} title="Looking Forward" />
-          <Field label="Focus for next 30 days">
-            <TextArea
-              value={form.focusForNext30Days}
-              onChange={v => set('focusForNext30Days', v)}
-              placeholder="What will you focus on in the next 30 days? Which principle, which behaviours?"
-              rows={4}
-            />
-          </Field>
+          <div className="space-y-4">
+            <Field label="Focus for next 30 days">
+              <TextArea
+                value={form.focusForNext30Days}
+                onChange={v => set('focusForNext30Days', v)}
+                placeholder="What will you focus on in the next 30 days? Which principle, which behaviours?"
+                rows={4}
+              />
+            </Field>
+            <Field label="Next check-in date">
+              <input
+                type="date"
+                value={form.nextCheckInDate}
+                onChange={e => set('nextCheckInDate', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent"
+              />
+            </Field>
+          </div>
         </div>
 
         {/* Submit */}

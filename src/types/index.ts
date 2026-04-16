@@ -77,6 +77,7 @@ export interface CheckIn {
   supportNeeded: boolean;
   typeOfSupportNeeded: string;
   focusForNext30Days: string;
+  nextCheckInDate: string;
 }
 
 export interface TrackerData {

@@ -201,6 +201,7 @@ export default function StartingPointForm() {
         <p className="text-sm text-gray-500 mt-3">
           This reflection is designed to help you step back and assess your leadership today. It combines personal reflection,
           team perception, and a self-assessment across the 6 leadership principles.
+          For each leadership principle, please rate where you believe you are today and provide brief evidence of what you currently do in practice.
         </p>
 
         {/* Version banner */}
@@ -216,12 +217,6 @@ export default function StartingPointForm() {
             </p>
           </div>
         )}
-      </div>
-
-      {/* Scale legend */}
-      <div className="mb-6 p-4 rounded-xl border text-xs" style={{ backgroundColor: '#E6FAFB', borderColor: IBL_CYAN, color: IBL_NAVY }}>
-        <p className="font-semibold mb-1">Self-rating scale for principles:</p>
-        <p>1 = Rarely true of me today &nbsp;·&nbsp; 2 = Sometimes true, but inconsistent &nbsp;·&nbsp; 3 = Often true in my leadership &nbsp;·&nbsp; 4 = Strongly present and visible &nbsp;·&nbsp; 5 = A clear strength, consistently demonstrated</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">

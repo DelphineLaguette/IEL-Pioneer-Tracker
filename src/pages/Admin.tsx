@@ -261,17 +261,28 @@ function CheckInCard({ ci, leaderRatings }: { ci: CheckIn; leaderRatings: number
 
         {/* Section 5 – Looking Forward */}
         <FormDivider title="Looking Forward" />
-        {ci.focusForNext30Days ? (
-          <div className="p-4 rounded-xl border-l-4"
-               style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
-            <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
-              Focus for next 30 days
-            </p>
-            <p className="text-sm text-gray-800 leading-relaxed">{ci.focusForNext30Days}</p>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-300 italic">—</p>
-        )}
+        <div className="space-y-3">
+          {ci.focusForNext30Days ? (
+            <div className="p-4 rounded-xl border-l-4"
+                 style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
+              <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
+                Focus for next 30 days
+              </p>
+              <p className="text-sm text-gray-800 leading-relaxed">{ci.focusForNext30Days}</p>
+            </div>
+          ) : (
+            <TextField label="Focus for next 30 days" value="" />
+          )}
+          <FormField label="Next check-in date">
+            {ci.nextCheckInDate ? (
+              <span className="text-sm font-semibold text-gray-800">
+                {new Date(ci.nextCheckInDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+            ) : (
+              <p className="text-sm text-gray-300 italic">—</p>
+            )}
+          </FormField>
+        </div>
 
       </div>
     </div>
@@ -361,6 +372,31 @@ function LeaderRow({
             </span>
           ) : null;
         }) : <span className="text-xs text-gray-300">None yet</span>}
+      </div>
+
+      {/* Next check-in date */}
+      <div className="w-32 flex-shrink-0">
+        {latest?.nextCheckInDate ? (
+          <div>
+            <p className="text-xs font-semibold text-gray-800">
+              {new Date(latest.nextCheckInDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+            {(() => {
+              const days = Math.ceil(
+                (new Date(latest.nextCheckInDate).getTime() - Date.now()) / 86400000,
+              );
+              if (days < 0)
+                return <p className="text-xs font-semibold" style={{ color: IBL_PINK }}>Overdue</p>;
+              if (days === 0)
+                return <p className="text-xs font-semibold" style={{ color: '#d97706' }}>Today</p>;
+              if (days <= 7)
+                return <p className="text-xs" style={{ color: '#d97706' }}>In {days}d</p>;
+              return <p className="text-xs text-gray-400">In {days}d</p>;
+            })()}
+          </div>
+        ) : (
+          <span className="text-xs text-gray-300">—</span>
+        )}
       </div>
 
       <div className="w-24 flex-shrink-0 text-right">
@@ -533,6 +569,7 @@ export default function Admin() {
           <div className="w-20 flex-shrink-0 text-center">Avg Rating</div>
           <div className="w-36 flex-shrink-0">Last Progress</div>
           <div className="flex-1">Principles Covered</div>
+          <div className="w-32 flex-shrink-0">Next Check-In</div>
           <div className="w-24 flex-shrink-0 text-right">Support</div>
         </div>
 
