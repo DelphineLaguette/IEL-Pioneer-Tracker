@@ -80,9 +80,32 @@ export interface CheckIn {
   nextCheckInDate: string;
 }
 
+export interface BiWeeklyCheckIn {
+  id: string;
+  leaderId: string;
+  createdAt: string;
+  // Part 1 – Weekly Progress
+  week: '1' | '2' | '3' | '4';
+  keyActionsTaken: string;
+  whatWentWell: string;
+  challenges: string;
+  supportNeeded: boolean;
+  typeOfSupportNeeded: string;
+  confidenceLevel: number; // 1–5
+  // Part 2 – Principle Focus
+  principleFocus: string;  // principle id
+  status: 'on-track' | 'progressing' | 'needs-attention';
+  selfRating: number;      // 1–5
+  managerRating: number;   // 1–5
+  overallProgressComment: string;
+  // Scheduling
+  nextCheckInDate: string; // YYYY-MM-DD
+}
+
 export interface TrackerData {
   startingPoints: StartingPoint[];
   checkIns: CheckIn[];
+  biWeeklyCheckIns: BiWeeklyCheckIn[];
 }
 
 export interface Leader {

@@ -1,8 +1,31 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { LEADERS, getLeader } from '../data/leaders';
+import { exportToExcel, exportToPowerPoint } from '../utils/exports';
 import { PRINCIPLES, getPrinciple } from '../data/principles';
 import type { CheckIn, StartingPoint } from '../types';
+
+// ── Export button with loading state ─────────────────────────────────────────
+function ExportButton({ label, icon, onClick }: { label: string; icon: string; onClick: () => Promise<void> }) {
+  const [loading, setLoading] = useState(false);
+  async function handle() {
+    setLoading(true);
+    try { await onClick(); } finally { setLoading(false); }
+  }
+  return (
+    <button
+      type="button"
+      onClick={handle}
+      disabled={loading}
+      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all
+                 bg-white/10 hover:bg-white/20 text-white disabled:opacity-60"
+    >
+      <span>{loading ? '…' : icon}</span>
+      {loading ? 'Generating…' : label}
+    </button>
+  );
+}
 
 // ── Mini sparkline (inline SVG, no extra deps) ────────────────────────────────
 function Sparkline({ ratings }: { ratings: number[] }) {
@@ -472,6 +495,30 @@ export default function Admin() {
           <p className="text-sm text-white/60 mt-1">
             Full visibility into every pioneer's progress across the 6 leadership principles
           </p>
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-3 mt-5">
+            <Link
+              to="/bi-weekly"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90"
+              style={{ backgroundColor: IBL_CYAN, color: IBL_NAVY }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Bi-Weekly Check-Ins
+            </Link>
+            <ExportButton
+              label="Export Excel"
+              icon="📊"
+              onClick={() => exportToExcel(data)}
+            />
+            <ExportButton
+              label="Export PowerPoint"
+              icon="📑"
+              onClick={() => exportToPowerPoint(data)}
+            />
+          </div>
         </div>
         <div className="h-1 w-full" style={{ backgroundColor: IBL_CYAN }} />
       </div>

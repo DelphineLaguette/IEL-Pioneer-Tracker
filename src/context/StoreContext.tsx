@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import type { TrackerData, StartingPoint, CheckIn } from '../types';
+import type { TrackerData, StartingPoint, CheckIn, BiWeeklyCheckIn } from '../types';
 import { SEED_STARTING_POINTS } from '../data/seedData';
 
 const STORAGE_KEY = 'iel-pioneer-tracker';
@@ -8,9 +8,9 @@ const STORAGE_KEY = 'iel-pioneer-tracker';
 const defaultData: TrackerData = {
   startingPoints: [],
   checkIns: [],
+  biWeeklyCheckIns: [],
 };
 
-/** Returns the most recent starting point for a given leader. */
 export function getLatestSP(
   startingPoints: StartingPoint[],
   leaderId: string,
@@ -20,7 +20,6 @@ export function getLatestSP(
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
 }
 
-/** Returns all starting points for a leader, newest first. */
 export function getAllSPs(
   startingPoints: StartingPoint[],
   leaderId: string,
@@ -45,6 +44,8 @@ function loadData(): TrackerData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const stored = raw ? (JSON.parse(raw) as TrackerData) : defaultData;
+    // Migrate: ensure new arrays exist for data saved before these features
+    if (!stored.biWeeklyCheckIns) stored.biWeeklyCheckIns = [];
     return mergeSeeds(stored);
   } catch {
     return mergeSeeds(defaultData);
@@ -55,6 +56,7 @@ interface StoreContextType {
   data: TrackerData;
   saveStartingPoint: (sp: StartingPoint) => void;
   addCheckIn: (ci: CheckIn) => void;
+  addBiWeeklyCheckIn: (bw: BiWeeklyCheckIn) => void;
 }
 
 const StoreContext = createContext<StoreContextType | null>(null);
@@ -64,7 +66,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const saveStartingPoint = useCallback((sp: StartingPoint) => {
     setData(prev => {
-      // Always append — never overwrite, preserving the full version history.
       const next: TrackerData = { ...prev, startingPoints: [...prev.startingPoints, sp] };
       persist(next);
       return next;
@@ -79,8 +80,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const addBiWeeklyCheckIn = useCallback((bw: BiWeeklyCheckIn) => {
+    setData(prev => {
+      const next: TrackerData = { ...prev, biWeeklyCheckIns: [...prev.biWeeklyCheckIns, bw] };
+      persist(next);
+      return next;
+    });
+  }, []);
+
   return (
-    <StoreContext.Provider value={{ data, saveStartingPoint, addCheckIn }}>
+    <StoreContext.Provider value={{ data, saveStartingPoint, addCheckIn, addBiWeeklyCheckIn }}>
       {children}
     </StoreContext.Provider>
   );

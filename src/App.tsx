@@ -6,6 +6,7 @@ import LeaderJourney from './pages/LeaderJourney';
 import StartingPointForm from './pages/StartingPointForm';
 import CheckInForm from './pages/CheckInForm';
 import Admin from './pages/Admin';
+import BiWeeklyCheckInPage from './pages/BiWeeklyCheckIn';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
             <Route path="/leaders/:leaderId/starting-point" element={<StartingPointForm />} />
             <Route path="/leaders/:leaderId/checkin/new" element={<CheckInForm />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/bi-weekly" element={<BiWeeklyCheckInPage />} />
           </Routes>
         </main>
       </div>
