@@ -16,10 +16,18 @@ const RATING_COLORS: Record<number, { bg: string; fg: string }> = {
   5: { bg: '#dcfce7', fg: '#15803d' },
 };
 
+const RATING_LABELS: Record<number, string> = {
+  1: 'Rarely true of me today',
+  2: 'Sometimes true, but inconsistent',
+  3: 'Often true in my leadership',
+  4: 'Strongly present and visible',
+  5: 'A clear strength, consistently demonstrated',
+};
+
 const PROGRESS_CONFIG = {
-  improved: { label: '↑ Improved',         bg: '#dcfce7', fg: '#15803d' },
-  same:     { label: '→ Same',             bg: '#fef9c3', fg: '#a16207' },
-  declined: { label: '↓ Need to improve',  bg: '#fee2e2', fg: '#b91c1c' },
+  improved: { label: '↑ Improved',        bg: '#dcfce7', fg: '#15803d' },
+  same:     { label: '→ About the same',  bg: '#fef9c3', fg: '#a16207' },
+  declined: { label: '↓ Need to improve', bg: '#fee2e2', fg: '#b91c1c' },
 };
 
 function formatDate(iso: string) {
@@ -31,205 +39,180 @@ function formatDate(iso: string) {
 function RatingBadge({ rating }: { rating: number }) {
   const c = RATING_COLORS[rating] ?? { bg: '#f3f4f6', fg: '#6b7280' };
   return (
-    <span className="px-2.5 py-1 rounded-full text-xs font-bold"
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold"
           style={{ backgroundColor: c.bg, color: c.fg }}>
       {rating}/5
+      {RATING_LABELS[rating] && (
+        <span className="font-normal text-xs opacity-80">— {RATING_LABELS[rating]}</span>
+      )}
     </span>
   );
 }
 
-// ── Expandable check-in detail card ──────────────────────────────────────────
+// ── Shared form-style field display ──────────────────────────────────────────
 
-function InfoBlock({ label, value, accent }: { label: string; value?: string; accent?: boolean }) {
-  if (!value) return null;
+function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="p-3 rounded-xl"
-         style={accent
-           ? { backgroundColor: '#fff0f7', border: `1px solid ${IBL_PINK}40` }
-           : { backgroundColor: '#f8fafc' }}>
-      <p className="text-xs font-semibold uppercase tracking-wide mb-1"
-         style={{ color: accent ? IBL_PINK : '#9ca3af' }}>
-        {label}
-      </p>
-      <p className="text-sm text-gray-800 leading-relaxed">{value}</p>
+    <div>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+      {children}
     </div>
   );
 }
 
-function SectionTitle({ children }: { children: string }) {
+function TextField({ label, value }: { label: string; value?: string }) {
+  if (!value) return (
+    <div>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+      <p className="text-sm text-gray-300 italic">—</p>
+    </div>
+  );
   return (
-    <div className="flex items-center gap-2 mt-2 mb-3">
+    <FormField label={label}>
+      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">{value}</p>
+    </FormField>
+  );
+}
+
+function FormDivider({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-3 py-1">
       <div className="h-px flex-1 bg-gray-100" />
-      <p className="text-xs font-bold uppercase tracking-widest px-2" style={{ color: IBL_NAVY }}>
-        {children}
-      </p>
+      <span className="text-xs font-bold uppercase tracking-widest px-1" style={{ color: IBL_NAVY }}>
+        {title}
+      </span>
       <div className="h-px flex-1 bg-gray-100" />
     </div>
   );
 }
 
-function CheckInDetail({ ci }: { ci: CheckIn }) {
-  const [expanded, setExpanded] = useState(false);
-  const leader   = getLeader(ci.leaderId);
+// ── Full check-in card (always visible, form-style) ──────────────────────────
+
+function CheckInCard({ ci }: { ci: CheckIn }) {
+  const leader    = getLeader(ci.leaderId);
   const principle = getPrinciple(ci.selectedPrinciple);
   const progress  = PROGRESS_CONFIG[ci.progressVersusLastMonth];
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      {/* ── Summary row (always visible) ── */}
-      <button
-        type="button"
-        onClick={() => setExpanded(e => !e)}
-        className="w-full text-left hover:bg-slate-50 transition-colors duration-150"
-      >
-        <div className="flex items-center gap-3 px-5 py-4">
-          {/* Avatar */}
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white
-                       font-bold text-sm flex-shrink-0"
-            style={{ backgroundColor: IBL_NAVY }}
-          >
-            {leader?.initials}
-          </div>
 
-          {/* Leader / month / principle */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-gray-900">{leader?.name}</span>
-              <span className="text-gray-300 text-xs">·</span>
-              <span className="text-sm text-gray-500">{ci.month}</span>
-              {principle && (
-                <>
-                  <span className="text-gray-300 text-xs">·</span>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-                    P{principle.number} — {principle.shortTitle}
-                  </span>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2 mt-1 text-xs text-gray-400 flex-wrap">
-              {ci.team && <span>{ci.team}</span>}
-              {ci.accountabilityPartner && (
-                <><span>·</span><span>Partner: {ci.accountabilityPartner}</span></>
-              )}
-              <span>·</span>
-              <span>Submitted {formatDate(ci.submittedAt)}</span>
-            </div>
-          </div>
+      {/* ── Header strip ── */}
+      <div className="px-6 py-4 flex items-center gap-4 border-b border-gray-100"
+           style={{ background: `linear-gradient(135deg, ${IBL_NAVY}08 0%, ${IBL_CYAN}10 100%)` }}>
+        <div className="w-11 h-11 rounded-full flex items-center justify-center text-white
+                        font-bold text-sm flex-shrink-0"
+             style={{ backgroundColor: IBL_NAVY }}>
+          {leader?.initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-gray-900">{leader?.name}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Submitted {formatDate(ci.submittedAt)}</p>
+        </div>
+        <div className="flex flex-wrap gap-2 justify-end">
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                style={{ backgroundColor: progress.bg, color: progress.fg }}>
+            {progress.label}
+          </span>
+          {ci.supportNeeded && (
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: '#fff0f7', color: IBL_PINK }}>
+              ⚠ Support needed
+            </span>
+          )}
+        </div>
+      </div>
 
-          {/* Badges */}
-          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+      {/* ── Form body ── */}
+      <div className="px-6 py-5 space-y-5">
+
+        {/* Section 1 – About This Month */}
+        <FormDivider title="About This Month" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <TextField label="Leader name" value={leader?.name} />
+          <TextField label="Email"       value={ci.email || '—'} />
+          <TextField label="Team"        value={ci.team  || '—'} />
+          <TextField label="Month"       value={ci.month} />
+        </div>
+
+        {/* Section 2 – This Month's Focus */}
+        <FormDivider title="This Month's Focus" />
+        <div className="space-y-4">
+          <FormField label="Selected leadership principle">
+            {principle ? (
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1
+                               rounded-full" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+                P{principle.number} — {principle.title}
+              </span>
+            ) : (
+              <p className="text-sm text-gray-300 italic">—</p>
+            )}
+          </FormField>
+          <TextField label="Why this principle this month?"  value={ci.whyThisPrinciple} />
+          <TextField label="3 behaviours I will practice"    value={ci.threeBehaviours} />
+          <TextField label="Success measure"                 value={ci.successMeasure} />
+          <TextField label="Accountability partner"          value={ci.accountabilityPartner} />
+        </div>
+
+        {/* Section 3 – Reflection */}
+        <FormDivider title="Reflection on This Month" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <TextField label="What I did well this month" value={ci.whatDidWell} />
+          <TextField label="Where I fell short"         value={ci.whereFellShort} />
+          <TextField label="Concrete example"           value={ci.concreteExample} />
+          <TextField label="Main obstacle"              value={ci.mainObstacle} />
+        </div>
+
+        {/* Section 4 – Feedback & Progress */}
+        <FormDivider title="Feedback & Progress" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <TextField label="Feedback from team"    value={ci.feedbackFromTeam} />
+          <TextField label="Feedback from manager" value={ci.feedbackFromManager} />
+
+          <FormField label="Self-rating this month">
             <RatingBadge rating={ci.selfRating} />
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+          </FormField>
+
+          <FormField label="Progress versus last month">
+            <span className="inline-flex text-sm font-semibold px-3 py-1 rounded-full"
                   style={{ backgroundColor: progress.bg, color: progress.fg }}>
               {progress.label}
             </span>
-            {ci.supportNeeded && (
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-                    style={{ backgroundColor: '#fff0f7', color: IBL_PINK }}>
-                ⚠ Support
-              </span>
-            )}
-            {/* Chevron */}
-            <svg className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-      </button>
+          </FormField>
 
-      {/* ── Expanded detail ── */}
-      {expanded && (
-        <div className="border-t border-gray-100 px-5 pb-6 pt-4 space-y-3">
+          <FormField label="Support needed?">
+            <span className="text-sm font-semibold"
+                  style={{ color: ci.supportNeeded ? IBL_PINK : '#15803d' }}>
+              {ci.supportNeeded ? 'Yes' : 'No'}
+            </span>
+          </FormField>
 
-          {/* Basic info row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: 'Leader',  value: leader?.name },
-              { label: 'Email',   value: ci.email   || '—' },
-              { label: 'Team',    value: ci.team    || '—' },
-              { label: 'Month',   value: ci.month },
-            ].map(({ label, value }) => (
-              <div key={label} className="p-3 bg-slate-50 rounded-xl">
-                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">{label}</p>
-                <p className="text-sm font-semibold text-gray-800">{value}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* ── This month's focus ── */}
-          <SectionTitle>This Month's Focus</SectionTitle>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <InfoBlock
-              label="Selected Leadership Principle"
-              value={principle ? `P${principle.number} — ${principle.title}` : ci.selectedPrinciple}
-            />
-            <InfoBlock label="Why this principle this month?"   value={ci.whyThisPrinciple} />
-            <InfoBlock label="3 behaviours I will practice"     value={ci.threeBehaviours} />
-            <InfoBlock label="Success measure"                  value={ci.successMeasure} />
-            <InfoBlock label="Accountability partner"           value={ci.accountabilityPartner} />
-          </div>
-
-          {/* ── Reflection ── */}
-          <SectionTitle>Monthly Reflection</SectionTitle>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <InfoBlock label="What I did well this month"  value={ci.whatDidWell} />
-            <InfoBlock label="Where I fell short"          value={ci.whereFellShort} />
-            <InfoBlock label="Concrete example"            value={ci.concreteExample} />
-            <InfoBlock label="Main obstacle"               value={ci.mainObstacle} />
-          </div>
-
-          {/* ── Feedback & progress ── */}
-          <SectionTitle>Feedback & Progress</SectionTitle>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <InfoBlock label="Feedback from team"    value={ci.feedbackFromTeam} />
-            <InfoBlock label="Feedback from manager" value={ci.feedbackFromManager} />
-            <div className="p-3 bg-slate-50 rounded-xl">
-              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">
-                Self-rating this month
+          {ci.supportNeeded && (
+            <div className="p-3 rounded-xl border sm:col-span-2"
+                 style={{ backgroundColor: '#fff8fb', borderColor: `${IBL_PINK}40` }}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-1"
+                 style={{ color: IBL_PINK }}>Type of support needed</p>
+              <p className="text-sm text-gray-800 leading-relaxed">
+                {ci.typeOfSupportNeeded || '—'}
               </p>
-              <RatingBadge rating={ci.selfRating} />
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl">
-              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">
-                Progress versus last month
-              </p>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full inline-block"
-                    style={{ backgroundColor: progress.bg, color: progress.fg }}>
-                {progress.label}
-              </span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-xl">
-              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">
-                Support needed?
-              </p>
-              <span className="text-sm font-semibold"
-                    style={{ color: ci.supportNeeded ? IBL_PINK : '#15803d' }}>
-                {ci.supportNeeded ? 'Yes' : 'No'}
-              </span>
-            </div>
-            {ci.supportNeeded && (
-              <InfoBlock label="Type of support needed" value={ci.typeOfSupportNeeded} accent />
-            )}
-          </div>
-
-          {/* ── Next 30 days ── */}
-          {ci.focusForNext30Days && (
-            <>
-              <SectionTitle>Looking Forward</SectionTitle>
-              <div className="p-4 rounded-xl border-l-4"
-                   style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
-                <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: '#1d4ed8' }}>
-                  Focus for next 30 days
-                </p>
-                <p className="text-sm text-gray-800 leading-relaxed">{ci.focusForNext30Days}</p>
-              </div>
-            </>
           )}
         </div>
-      )}
+
+        {/* Section 5 – Looking Forward */}
+        <FormDivider title="Looking Forward" />
+        {ci.focusForNext30Days ? (
+          <div className="p-4 rounded-xl border-l-4"
+               style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
+            <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
+              Focus for next 30 days
+            </p>
+            <p className="text-sm text-gray-800 leading-relaxed">{ci.focusForNext30Days}</p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-300 italic">—</p>
+        )}
+
+      </div>
     </div>
   );
 }
@@ -245,12 +228,12 @@ function LeaderRow({
   sp: StartingPoint | undefined;
   checkIns: CheckIn[];
 }) {
-  const sorted       = [...checkIns].sort((a, b) =>
-    new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime()
+  const sorted    = [...checkIns].sort(
+    (a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime(),
   );
-  const latest       = sorted[sorted.length - 1];
-  const ratings      = checkIns.map(c => c.selfRating).filter(r => r > 0);
-  const avgRating    = ratings.length > 0
+  const latest    = sorted[sorted.length - 1];
+  const ratings   = checkIns.map(c => c.selfRating).filter(r => r > 0);
+  const avgRating = ratings.length > 0
     ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
     : null;
   const needsSupport = latest?.supportNeeded ?? false;
@@ -261,26 +244,21 @@ function LeaderRow({
                      ${needsSupport ? 'border border-pink-200' : 'border border-transparent hover:bg-slate-50'}`}
          style={needsSupport ? { backgroundColor: '#fff8fb' } : {}}>
 
-      {/* Avatar */}
       <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold
                       text-xs flex-shrink-0"
            style={{ backgroundColor: IBL_NAVY }}>
         {leader.initials}
       </div>
 
-      {/* Name + team */}
       <div className="w-28 flex-shrink-0 min-w-0">
         <p className="font-bold text-sm text-gray-900 truncate">{leader.name}</p>
         <p className="text-xs text-gray-400 truncate">{sp?.team ?? '—'}</p>
       </div>
 
-      {/* Reflection */}
       <div className="w-24 flex-shrink-0">
         {sp ? (
           <span className="px-2 py-0.5 rounded-full text-xs font-bold"
-                style={{ backgroundColor: '#dcfce7', color: '#15803d' }}>
-            ✓ Done
-          </span>
+                style={{ backgroundColor: '#dcfce7', color: '#15803d' }}>✓ Done</span>
         ) : (
           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-400">
             Pending
@@ -288,13 +266,11 @@ function LeaderRow({
         )}
       </div>
 
-      {/* Check-in count */}
       <div className="w-20 flex-shrink-0 text-center">
         <p className="text-xl font-extrabold" style={{ color: IBL_NAVY }}>{checkIns.length}</p>
         <p className="text-xs text-gray-400 leading-none">check-in{checkIns.length !== 1 ? 's' : ''}</p>
       </div>
 
-      {/* Avg rating */}
       <div className="w-20 flex-shrink-0 text-center">
         {avgRating ? (
           <>
@@ -304,7 +280,6 @@ function LeaderRow({
         ) : <span className="text-xs text-gray-300">—</span>}
       </div>
 
-      {/* Latest progress */}
       <div className="w-36 flex-shrink-0">
         {latest ? (
           <span className="text-xs font-semibold px-2 py-1 rounded-full inline-block"
@@ -315,7 +290,6 @@ function LeaderRow({
         ) : <span className="text-xs text-gray-300">No check-ins</span>}
       </div>
 
-      {/* Principles covered */}
       <div className="flex-1 flex flex-wrap gap-1 min-w-0">
         {principles.length > 0 ? principles.map(pid => {
           const p = getPrinciple(pid);
@@ -328,13 +302,10 @@ function LeaderRow({
         }) : <span className="text-xs text-gray-300">None yet</span>}
       </div>
 
-      {/* Support flag */}
       <div className="w-24 flex-shrink-0 text-right">
         {needsSupport ? (
           <span className="text-xs font-bold px-2 py-1 rounded-full"
-                style={{ backgroundColor: '#fff0f7', color: IBL_PINK }}>
-            ⚠ Support
-          </span>
+                style={{ backgroundColor: '#fff0f7', color: IBL_PINK }}>⚠ Support</span>
         ) : <span className="text-gray-200 text-sm">—</span>}
       </div>
     </div>
@@ -345,12 +316,11 @@ function LeaderRow({
 
 export default function Admin() {
   const { data } = useStore();
-  const [filterLeader,  setFilterLeader]  = useState('');
-  const [filterSupport, setFilterSupport] = useState(false);
+  const [filterLeader, setFilterLeader] = useState('');
 
   // ── Overview stats ──────────────────────────────────────────────────────────
   const completedReflections = LEADERS.filter(l =>
-    data.startingPoints.some(s => s.leaderId === l.id)
+    data.startingPoints.some(s => s.leaderId === l.id),
   ).length;
   const allRatings    = data.checkIns.map(c => c.selfRating).filter(r => r > 0);
   const avgRating     = allRatings.length
@@ -372,14 +342,8 @@ export default function Admin() {
 
   // ── Filtered check-ins ──────────────────────────────────────────────────────
   const filtered = data.checkIns
-    .filter(ci => {
-      if (filterLeader  && ci.leaderId !== filterLeader) return false;
-      if (filterSupport && !ci.supportNeeded)            return false;
-      return true;
-    })
+    .filter(ci => !filterLeader || ci.leaderId === filterLeader)
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-
-  const hasFilters = filterLeader || filterSupport;
 
   return (
     <div className="space-y-6">
@@ -406,11 +370,11 @@ export default function Admin() {
       {/* ── Overview stats ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         {([
-          { label: 'Pioneers',        value: LEADERS.length,               sub: 'total',            color: IBL_NAVY },
-          { label: 'Reflections',     value: completedReflections,         sub: 'completed',        color: '#15803d' },
-          { label: 'Check-Ins',       value: data.checkIns.length,         sub: 'submitted',        color: IBL_CYAN },
-          { label: 'Avg Self-Rating', value: avgRating,                    sub: 'out of 5',         color: '#1d4ed8' },
-          { label: 'Support Flags',   value: supportCount,                 sub: 'need attention',   color: '#be185d' },
+          { label: 'Pioneers',        value: LEADERS.length,       sub: 'total',          color: IBL_NAVY  },
+          { label: 'Reflections',     value: completedReflections, sub: 'completed',       color: '#15803d' },
+          { label: 'Check-Ins',       value: data.checkIns.length, sub: 'submitted',       color: IBL_CYAN  },
+          { label: 'Avg Self-Rating', value: avgRating,            sub: 'out of 5',        color: '#1d4ed8' },
+          { label: 'Support Flags',   value: supportCount,         sub: 'need attention',  color: '#be185d' },
         ] as const).map(s => (
           <div key={s.label}
                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
@@ -448,7 +412,8 @@ export default function Admin() {
                     {leader?.initials}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 text-sm">{leader?.name}
+                    <p className="font-bold text-gray-900 text-sm">
+                      {leader?.name}
                       <span className="font-normal text-gray-400"> · {ci.month}</span>
                     </p>
                     {principle && (
@@ -486,7 +451,6 @@ export default function Admin() {
           <h2 className="font-bold text-gray-900">Pioneer Progress Matrix</h2>
         </div>
 
-        {/* Column headers */}
         <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-slate-50 border-b border-gray-100
                         text-xs font-semibold text-gray-400 uppercase tracking-wide">
           <div className="w-9 flex-shrink-0" />
@@ -503,9 +467,7 @@ export default function Admin() {
           {LEADERS.map(leader => {
             const sp       = data.startingPoints.find(s => s.leaderId === leader.id);
             const checkIns = data.checkIns.filter(c => c.leaderId === leader.id);
-            return (
-              <LeaderRow key={leader.id} leader={leader} sp={sp} checkIns={checkIns} />
-            );
+            return <LeaderRow key={leader.id} leader={leader} sp={sp} checkIns={checkIns} />;
           })}
         </div>
       </div>
@@ -548,76 +510,41 @@ export default function Admin() {
       )}
 
       {/* ── 30-Day Check-In Browser ──────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold"
-                 style={{ backgroundColor: IBL_CYAN, color: IBL_NAVY }}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
-                         M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="font-bold text-gray-900">30-Day Check-In Browser</h2>
-              <p className="text-xs text-gray-400">
-                {filtered.length} of {data.checkIns.length} check-in{data.checkIns.length !== 1 ? 's' : ''} shown
-                · Click any row to expand full detail
-              </p>
-            </div>
+      <div className="space-y-4">
+        {/* Header + filter */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">30-Day Leadership Check-Ins</h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {filtered.length} check-in{filtered.length !== 1 ? 's' : ''}
+              {filterLeader ? ` for ${getLeader(filterLeader)?.name}` : ' across all leaders'}
+            </p>
           </div>
-
-          {/* Filters */}
-          <div className="flex flex-wrap gap-2">
+          <div className="ml-auto">
             <select
               value={filterLeader}
               onChange={e => setFilterLeader(e.target.value)}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white
+              className="border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white
                          focus:outline-none focus:ring-2 focus:ring-[#00D0DA]"
             >
               <option value="">All leaders</option>
               {LEADERS.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
-
-            <button
-              type="button"
-              onClick={() => setFilterSupport(v => !v)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all border"
-              style={filterSupport
-                ? { backgroundColor: '#fff0f7', color: IBL_PINK, borderColor: IBL_PINK }
-                : { backgroundColor: '#f9fafb', color: '#6b7280', borderColor: '#e5e7eb' }}
-            >
-              ⚠ Support needed only
-            </button>
-
-            {hasFilters && (
-              <button
-                type="button"
-                onClick={() => { setFilterLeader(''); setFilterSupport(false); }}
-                className="px-4 py-2 rounded-xl text-sm text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                Clear filters
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Check-in list */}
-        <div className="p-4 space-y-3">
-          {filtered.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-gray-400 text-sm">
-                {data.checkIns.length === 0
-                  ? 'No check-ins have been submitted yet.'
-                  : 'No check-ins match the selected filters.'}
-              </p>
-            </div>
-          ) : (
-            filtered.map(ci => <CheckInDetail key={ci.id} ci={ci} />)
-          )}
-        </div>
+        {/* Check-in cards */}
+        {filtered.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-16">
+            <p className="text-gray-400 text-sm">
+              {data.checkIns.length === 0
+                ? 'No check-ins have been submitted yet.'
+                : 'No check-ins for this leader yet.'}
+            </p>
+          </div>
+        ) : (
+          filtered.map(ci => <CheckInCard key={ci.id} ci={ci} />)
+        )}
       </div>
 
     </div>
