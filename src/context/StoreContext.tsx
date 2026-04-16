@@ -10,16 +10,35 @@ const defaultData: TrackerData = {
   checkIns: [],
 };
 
-/**
- * Merge seed starting points into stored data.
- * Only adds a seed entry if no starting point already exists for that leaderId,
- * so hand-entered data is never overwritten.
- */
+/** Returns the most recent starting point for a given leader. */
+export function getLatestSP(
+  startingPoints: StartingPoint[],
+  leaderId: string,
+): StartingPoint | undefined {
+  return [...startingPoints]
+    .filter(s => s.leaderId === leaderId)
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
+}
+
+/** Returns all starting points for a leader, newest first. */
+export function getAllSPs(
+  startingPoints: StartingPoint[],
+  leaderId: string,
+): StartingPoint[] {
+  return [...startingPoints]
+    .filter(s => s.leaderId === leaderId)
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+}
+
 function mergeSeeds(stored: TrackerData): TrackerData {
   const existingIds = new Set(stored.startingPoints.map(s => s.leaderId));
   const toAdd = SEED_STARTING_POINTS.filter(s => !existingIds.has(s.leaderId));
   if (toAdd.length === 0) return stored;
   return { ...stored, startingPoints: [...stored.startingPoints, ...toAdd] };
+}
+
+function persist(data: TrackerData): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 function loadData(): TrackerData {
@@ -30,10 +49,6 @@ function loadData(): TrackerData {
   } catch {
     return mergeSeeds(defaultData);
   }
-}
-
-function persist(data: TrackerData): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 interface StoreContextType {
@@ -49,8 +64,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const saveStartingPoint = useCallback((sp: StartingPoint) => {
     setData(prev => {
-      const filtered = prev.startingPoints.filter(s => s.leaderId !== sp.leaderId);
-      const next: TrackerData = { ...prev, startingPoints: [...filtered, sp] };
+      // Always append — never overwrite, preserving the full version history.
+      const next: TrackerData = { ...prev, startingPoints: [...prev.startingPoints, sp] };
       persist(next);
       return next;
     });

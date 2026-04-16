@@ -4,6 +4,39 @@ import { LEADERS, getLeader } from '../data/leaders';
 import { PRINCIPLES, getPrinciple } from '../data/principles';
 import type { CheckIn, StartingPoint } from '../types';
 
+// ── Mini sparkline (inline SVG, no extra deps) ────────────────────────────────
+function Sparkline({ ratings }: { ratings: number[] }) {
+  if (ratings.length < 2) {
+    // Single dot
+    return (
+      <svg width={56} height={24} className="flex-shrink-0">
+        <circle cx={28} cy={12} r={4} fill={IBL_CYAN} />
+      </svg>
+    );
+  }
+  const W = 56, H = 24, PAD = 4;
+  const toX = (i: number) => PAD + (i / (ratings.length - 1)) * (W - PAD * 2);
+  const toY = (r: number) => H - PAD - ((r - 1) / 4) * (H - PAD * 2);
+  const pts = ratings.map((r, i) => ({ x: toX(i), y: toY(r) }));
+  const polyline = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const last = pts[pts.length - 1];
+  const prev = pts[pts.length - 2];
+  const trend = last.y < prev.y ? IBL_CYAN : last.y > prev.y ? '#f87171' : '#fbbf24';
+  return (
+    <svg width={W} height={H} className="flex-shrink-0">
+      <polyline points={polyline} fill="none" stroke="#e2e8f0" strokeWidth="1.5" strokeLinejoin="round" />
+      <polyline
+        points={`${prev.x.toFixed(1)},${prev.y.toFixed(1)} ${last.x.toFixed(1)},${last.y.toFixed(1)}`}
+        fill="none" stroke={trend} strokeWidth="2" strokeLinejoin="round"
+      />
+      {pts.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r={i === pts.length - 1 ? 3.5 : 2}
+                fill={i === pts.length - 1 ? IBL_NAVY : '#cbd5e1'} />
+      ))}
+    </svg>
+  );
+}
+
 const IBL_NAVY = '#002060';
 const IBL_CYAN  = '#00D0DA';
 const IBL_PINK  = '#FF51A1';
@@ -88,16 +121,22 @@ function FormDivider({ title }: { title: string }) {
 
 // ── Full check-in card (always visible, form-style) ──────────────────────────
 
-function CheckInCard({ ci }: { ci: CheckIn }) {
+function CheckInCard({ ci, leaderRatings }: { ci: CheckIn; leaderRatings: number[] }) {
   const leader    = getLeader(ci.leaderId);
   const principle = getPrinciple(ci.selectedPrinciple);
   const progress  = PROGRESS_CONFIG[ci.progressVersusLastMonth];
+
+  // Delta vs previous check-in for this leader
+  const ciIdx   = leaderRatings.indexOf(ci.selfRating); // approximate; use position in sorted list
+  const myPos   = leaderRatings.length - 1; // current card is the most recent shown
+  const prevRating = leaderRatings[leaderRatings.length - 2];
+  const delta   = leaderRatings.length > 1 ? ci.selfRating - prevRating : null;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
       {/* ── Header strip ── */}
-      <div className="px-6 py-4 flex items-center gap-4 border-b border-gray-100"
+      <div className="px-6 py-4 flex items-center gap-3 border-b border-gray-100"
            style={{ background: `linear-gradient(135deg, ${IBL_NAVY}08 0%, ${IBL_CYAN}10 100%)` }}>
         <div className="w-11 h-11 rounded-full flex items-center justify-center text-white
                         font-bold text-sm flex-shrink-0"
@@ -108,7 +147,29 @@ function CheckInCard({ ci }: { ci: CheckIn }) {
           <p className="font-bold text-gray-900">{leader?.name}</p>
           <p className="text-xs text-gray-400 mt-0.5">Submitted {formatDate(ci.submittedAt)}</p>
         </div>
-        <div className="flex flex-wrap gap-2 justify-end">
+
+        {/* Evolution sparkline + rating */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-col items-end gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <Sparkline ratings={leaderRatings} />
+              <span className="text-lg font-extrabold" style={{ color: IBL_NAVY }}>
+                {ci.selfRating}<span className="text-xs font-normal text-gray-400">/5</span>
+              </span>
+            </div>
+            {delta !== null && delta !== 0 && (
+              <span className="text-xs font-semibold"
+                    style={{ color: delta > 0 ? '#15803d' : '#b91c1c' }}>
+                {delta > 0 ? `↑ +${delta}` : `↓ ${delta}`} vs prev
+              </span>
+            )}
+            {delta === 0 && leaderRatings.length > 1 && (
+              <span className="text-xs text-gray-400">= same as prev</span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5 flex-shrink-0 items-end">
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
                 style={{ backgroundColor: progress.bg, color: progress.fg }}>
             {progress.label}
@@ -345,6 +406,18 @@ export default function Admin() {
     .filter(ci => !filterLeader || ci.leaderId === filterLeader)
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
 
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? filtered : filtered.slice(0, 3);
+
+  // Chronological self-ratings per leader (for sparkline)
+  const ratingsByLeader: Record<string, number[]> = {};
+  data.checkIns
+    .sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime())
+    .forEach(ci => {
+      if (!ratingsByLeader[ci.leaderId]) ratingsByLeader[ci.leaderId] = [];
+      ratingsByLeader[ci.leaderId].push(ci.selfRating);
+    });
+
   return (
     <div className="space-y-6">
 
@@ -543,7 +616,27 @@ export default function Admin() {
             </p>
           </div>
         ) : (
-          filtered.map(ci => <CheckInCard key={ci.id} ci={ci} />)
+          <>
+            {visible.map(ci => (
+              <CheckInCard
+                key={ci.id}
+                ci={ci}
+                leaderRatings={ratingsByLeader[ci.leaderId] ?? [ci.selfRating]}
+              />
+            ))}
+            {filtered.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setShowAll(v => !v)}
+                className="w-full py-3 rounded-2xl border border-gray-200 text-sm font-semibold
+                           text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                {showAll
+                  ? 'Show less'
+                  : `Show all ${filtered.length} check-ins`}
+              </button>
+            )}
+          </>
         )}
       </div>
 

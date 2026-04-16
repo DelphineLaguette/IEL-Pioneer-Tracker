@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
+import { getLatestSP, getAllSPs } from '../context/StoreContext';
 import { getLeader } from '../data/leaders';
 import { PRINCIPLES } from '../data/principles';
 import type { StartingPoint, PrincipleKey, PrincipleRating } from '../types';
@@ -135,6 +136,10 @@ function buildDefault(existing?: StartingPoint): Omit<StartingPoint, 'id' | 'lea
   };
 }
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function StartingPointForm() {
@@ -142,9 +147,12 @@ export default function StartingPointForm() {
   const navigate = useNavigate();
   const { data, saveStartingPoint } = useStore();
 
-  const leader = getLeader(leaderId ?? '');
-  const existing = data.startingPoints.find(s => s.leaderId === leaderId);
-  const [form, setForm] = useState(() => buildDefault(existing));
+  const leader  = getLeader(leaderId ?? '');
+  const latest  = getLatestSP(data.startingPoints, leaderId ?? '');
+  const allVersions = getAllSPs(data.startingPoints, leaderId ?? '');
+  const versionNumber = allVersions.length + 1;
+
+  const [form, setForm] = useState(() => buildDefault(latest));
 
   if (!leader) {
     return <p className="text-gray-500">Leader not found.</p>;
@@ -166,7 +174,7 @@ export default function StartingPointForm() {
     if (!leader) return;
     const sp: StartingPoint = {
       ...form,
-      id: existing?.id ?? crypto.randomUUID(),
+      id: crypto.randomUUID(), // always a new entry — never overwrites
       leaderId: leader.id,
       submittedAt: new Date().toISOString(),
     };
@@ -194,9 +202,18 @@ export default function StartingPointForm() {
           This reflection is designed to help you step back and assess your leadership today. It combines personal reflection,
           team perception, and a self-assessment across the 6 leadership principles.
         </p>
-        {existing && (
-          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-            You have an existing reflection. Submitting this form will update it.
+
+        {/* Version banner */}
+        {allVersions.length > 0 && (
+          <div className="mt-3 p-3 rounded-lg border text-sm"
+               style={{ backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }}>
+            <p className="font-semibold text-blue-800">
+              Version {versionNumber} of this reflection
+            </p>
+            <p className="text-blue-600 text-xs mt-0.5">
+              Pre-filled from your latest submission ({formatDate(latest!.submittedAt)}).
+              Submitting will save a new version — your previous {allVersions.length === 1 ? 'version is' : `${allVersions.length} versions are`} preserved.
+            </p>
           </div>
         )}
       </div>
@@ -375,7 +392,7 @@ export default function StartingPointForm() {
             className="flex-1 py-2.5 text-white text-sm font-semibold rounded-lg transition-colors"
             style={{ backgroundColor: IBL_NAVY }}
           >
-            {existing ? 'Update Reflection' : 'Submit Starting Reflection'}
+            {allVersions.length > 0 ? `Save as Version ${versionNumber}` : 'Submit Starting Reflection'}
           </button>
         </div>
       </form>
