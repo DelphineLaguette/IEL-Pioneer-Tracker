@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type { TrackerData, StartingPoint, CheckIn } from '../types';
+import { SEED_STARTING_POINTS } from '../data/seedData';
 
 const STORAGE_KEY = 'iel-pioneer-tracker';
 
@@ -9,12 +10,25 @@ const defaultData: TrackerData = {
   checkIns: [],
 };
 
+/**
+ * Merge seed starting points into stored data.
+ * Only adds a seed entry if no starting point already exists for that leaderId,
+ * so hand-entered data is never overwritten.
+ */
+function mergeSeeds(stored: TrackerData): TrackerData {
+  const existingIds = new Set(stored.startingPoints.map(s => s.leaderId));
+  const toAdd = SEED_STARTING_POINTS.filter(s => !existingIds.has(s.leaderId));
+  if (toAdd.length === 0) return stored;
+  return { ...stored, startingPoints: [...stored.startingPoints, ...toAdd] };
+}
+
 function loadData(): TrackerData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as TrackerData) : defaultData;
+    const stored = raw ? (JSON.parse(raw) as TrackerData) : defaultData;
+    return mergeSeeds(stored);
   } catch {
-    return defaultData;
+    return mergeSeeds(defaultData);
   }
 }
 
