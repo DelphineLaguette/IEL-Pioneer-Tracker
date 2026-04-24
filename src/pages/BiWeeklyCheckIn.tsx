@@ -450,11 +450,11 @@ export default function BiWeeklyCheckInPage() {
               <Field label="Week" required>
                 <select
                   value={form.week}
-                  onChange={e => set('week', e.target.value as BiWeeklyCheckIn['week'])}
+                  onChange={e => set('week', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white
                              focus:outline-none focus:ring-2 focus:ring-[#00D0DA]"
                 >
-                  {(['1','2','3','4'] as const).map(w => (
+                  {Array.from({ length: 100 }, (_, i) => String(i + 1)).map(w => (
                     <option key={w} value={w}>Week {w}</option>
                   ))}
                 </select>

@@ -85,7 +85,7 @@ export interface BiWeeklyCheckIn {
   leaderId: string;
   createdAt: string;
   // Part 1 – Weekly Progress
-  week: '1' | '2' | '3' | '4';
+  week: string;
   keyActionsTaken: string;
   whatWentWell: string;
   challenges: string;
