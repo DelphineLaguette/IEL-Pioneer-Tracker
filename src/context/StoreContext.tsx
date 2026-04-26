@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type { TrackerData, StartingPoint, CheckIn, BiWeeklyCheckIn } from '../types';
-import { SEED_STARTING_POINTS } from '../data/seedData';
+import { SEED_STARTING_POINTS, SEED_BI_WEEKLY_CHECK_INS } from '../data/seedData';
 
 const STORAGE_KEY = 'iel-pioneer-tracker';
 
@@ -30,10 +30,18 @@ export function getAllSPs(
 }
 
 function mergeSeeds(stored: TrackerData): TrackerData {
-  const existingIds = new Set(stored.startingPoints.map(s => s.leaderId));
-  const toAdd = SEED_STARTING_POINTS.filter(s => !existingIds.has(s.leaderId));
-  if (toAdd.length === 0) return stored;
-  return { ...stored, startingPoints: [...stored.startingPoints, ...toAdd] };
+  const existingSpIds = new Set(stored.startingPoints.map(s => s.leaderId));
+  const spToAdd = SEED_STARTING_POINTS.filter(s => !existingSpIds.has(s.leaderId));
+
+  const existingBwIds = new Set(stored.biWeeklyCheckIns.map(b => b.id));
+  const bwToAdd = SEED_BI_WEEKLY_CHECK_INS.filter(b => !existingBwIds.has(b.id));
+
+  if (spToAdd.length === 0 && bwToAdd.length === 0) return stored;
+  return {
+    ...stored,
+    startingPoints: [...stored.startingPoints, ...spToAdd],
+    biWeeklyCheckIns: [...stored.biWeeklyCheckIns, ...bwToAdd],
+  };
 }
 
 function persist(data: TrackerData): void {
