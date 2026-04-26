@@ -94,10 +94,22 @@ export interface BiWeeklyCheckIn {
   confidenceLevel: number; // 1–5
   // Part 2 – Principle Focus
   principleFocus: string;  // principle id
+  whyThisPrinciple: string;
+  behavioursTopractice: string;
+  successMeasure: string;
+  accountabilityPartner: string;
   status: 'on-track' | 'progressing' | 'needs-attention';
   selfRating: number;      // 1–5
   managerRating: number;   // 1–5
   overallProgressComment: string;
+  // Part 3 – Monthly Reflection
+  whatDidWell: string;
+  whereFellShort: string;
+  concreteExample: string;
+  mainObstacle: string;
+  feedbackFromTeam: string;
+  feedbackFromManager: string;
+  focusNextMonth: string;
   // Scheduling
   nextCheckInDate: string; // YYYY-MM-DD
 }

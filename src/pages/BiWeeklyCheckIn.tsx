@@ -281,6 +281,19 @@ function HistoryCard({ bw }: { bw: BiWeeklyCheckIn }) {
                 <p className="text-lg font-extrabold" style={{ color: IBL_CYAN }}>{bw.managerRating > 0 ? `${bw.managerRating}/5` : '—'}</p>
               </div>
             </div>
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { label: 'Why this principle this month?', value: bw.whyThisPrinciple },
+                { label: '3 behaviours I will practice',  value: bw.behavioursTopractice },
+                { label: 'Success measure',               value: bw.successMeasure },
+                { label: 'Accountability partner',        value: bw.accountabilityPartner },
+              ].map(({ label, value }) => value ? (
+                <div key={label} className="p-3 rounded-xl bg-slate-50">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+                  <p className="text-sm text-gray-800 leading-relaxed">{value}</p>
+                </div>
+              ) : null)}
+            </div>
             {bw.overallProgressComment && (
               <div className="mt-3 p-3 rounded-xl border-l-4"
                    style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
@@ -291,6 +304,30 @@ function HistoryCard({ bw }: { bw: BiWeeklyCheckIn }) {
               </div>
             )}
           </div>
+          {/* Part 3 */}
+          {(bw.whatDidWell || bw.whereFellShort || bw.concreteExample || bw.mainObstacle || bw.feedbackFromTeam || bw.feedbackFromManager || bw.focusNextMonth) && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: IBL_NAVY }}>
+                Monthly Reflection
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { label: 'What I did well this month', value: bw.whatDidWell },
+                  { label: 'Where I fell short',         value: bw.whereFellShort },
+                  { label: 'Concrete example',           value: bw.concreteExample },
+                  { label: 'Main obstacle',              value: bw.mainObstacle },
+                  { label: 'Feedback from team',         value: bw.feedbackFromTeam },
+                  { label: 'Feedback from manager',      value: bw.feedbackFromManager },
+                  { label: 'Focus for next 30 days',     value: bw.focusNextMonth },
+                ].map(({ label, value }) => value ? (
+                  <div key={label} className="p-3 rounded-xl bg-slate-50">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+                    <p className="text-sm text-gray-800 leading-relaxed">{value}</p>
+                  </div>
+                ) : null)}
+              </div>
+            </div>
+          )}
           {bw.nextCheckInDate && (
             <p className="text-xs text-gray-400">
               Next check-in: <span className="font-semibold text-gray-700">{formatDateLong(bw.nextCheckInDate)}</span>
@@ -315,10 +352,21 @@ function buildDefault(leaderId: string): Omit<BiWeeklyCheckIn, 'id' | 'createdAt
     typeOfSupportNeeded: '',
     confidenceLevel: 0,
     principleFocus: '',
+    whyThisPrinciple: '',
+    behavioursTopractice: '',
+    successMeasure: '',
+    accountabilityPartner: '',
     status: 'on-track',
     selfRating: 0,
     managerRating: 0,
     overallProgressComment: '',
+    whatDidWell: '',
+    whereFellShort: '',
+    concreteExample: '',
+    mainObstacle: '',
+    feedbackFromTeam: '',
+    feedbackFromManager: '',
+    focusNextMonth: '',
     nextCheckInDate: addDays(14),
   };
 }
@@ -368,9 +416,6 @@ export default function BiWeeklyCheckInPage() {
         <div className="absolute rounded-full opacity-10 pointer-events-none"
              style={{ width: 110, height: 110, backgroundColor: IBL_PINK, bottom: -25, right: 200 }} />
         <div className="relative z-10 p-8">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: IBL_CYAN }}>
-            IBL Energy · IEL Programme
-          </p>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">Bi-Weekly Culture Check-In</h1>
           <p className="text-sm text-white/60 mt-1">
             Track fortnightly culture conversations and leadership progress with each pioneer
@@ -504,7 +549,7 @@ export default function BiWeeklyCheckInPage() {
             {/* Part 2 */}
             <div className="space-y-4">
               <SectionHeader number={2} title="Principle Focus" />
-              <Field label="Principle focus" required>
+              <Field label="Selected leadership principle" required>
                 <select
                   value={form.principleFocus}
                   onChange={e => set('principleFocus', e.target.value)}
@@ -517,6 +562,22 @@ export default function BiWeeklyCheckInPage() {
                     <option key={p.id} value={p.id}>P{p.number} — {p.title}</option>
                   ))}
                 </select>
+              </Field>
+              <Field label="Why this principle this month?">
+                <TextArea value={form.whyThisPrinciple} onChange={v => set('whyThisPrinciple', v)}
+                          placeholder="What makes this principle the right focus right now?" />
+              </Field>
+              <Field label="3 behaviours I will practice">
+                <TextArea value={form.behavioursTopractice} onChange={v => set('behavioursTopractice', v)}
+                          placeholder="List the 3 specific behaviours you commit to practising…" />
+              </Field>
+              <Field label="Success measure">
+                <TextArea value={form.successMeasure} onChange={v => set('successMeasure', v)}
+                          placeholder="How will you know you've been successful?" rows={2} />
+              </Field>
+              <Field label="Accountability partner">
+                <TextArea value={form.accountabilityPartner} onChange={v => set('accountabilityPartner', v)}
+                          placeholder="Who will hold you accountable?" rows={2} />
               </Field>
               <Field label="Status">
                 <div className="flex gap-2 flex-wrap">
@@ -544,6 +605,39 @@ export default function BiWeeklyCheckInPage() {
               <Field label="Overall progress comment">
                 <TextArea value={form.overallProgressComment} onChange={v => set('overallProgressComment', v)}
                           placeholder="Summarise the leader's overall progress this fortnight…" />
+              </Field>
+            </div>
+
+            {/* Part 3 */}
+            <div className="space-y-4">
+              <SectionHeader number={3} title="Monthly Reflection" />
+              <Field label="What I did well this month">
+                <TextArea value={form.whatDidWell} onChange={v => set('whatDidWell', v)}
+                          placeholder="Achievements and positive moments worth acknowledging…" />
+              </Field>
+              <Field label="Where I fell short">
+                <TextArea value={form.whereFellShort} onChange={v => set('whereFellShort', v)}
+                          placeholder="Areas where you didn't meet your own expectations…" />
+              </Field>
+              <Field label="Concrete example">
+                <TextArea value={form.concreteExample} onChange={v => set('concreteExample', v)}
+                          placeholder="A specific situation that illustrates your progress or challenge…" />
+              </Field>
+              <Field label="Main obstacle">
+                <TextArea value={form.mainObstacle} onChange={v => set('mainObstacle', v)}
+                          placeholder="What got in the way most this month?" rows={2} />
+              </Field>
+              <Field label="Feedback from team">
+                <TextArea value={form.feedbackFromTeam} onChange={v => set('feedbackFromTeam', v)}
+                          placeholder="What feedback have you received from your team?" />
+              </Field>
+              <Field label="Feedback from manager">
+                <TextArea value={form.feedbackFromManager} onChange={v => set('feedbackFromManager', v)}
+                          placeholder="What feedback have you received from your manager?" />
+              </Field>
+              <Field label="Focus for next 30 days">
+                <TextArea value={form.focusNextMonth} onChange={v => set('focusNextMonth', v)}
+                          placeholder="What is your main leadership focus for the next 30 days?" />
               </Field>
               <Field label="Next check-in date">
                 <input
