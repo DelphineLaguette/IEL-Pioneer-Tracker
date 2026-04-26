@@ -4,7 +4,7 @@ const IBL_NAVY = '#002060';
 const IBL_CYAN = '#00D0DA';
 
 const CREDENTIALS = [
-  { email: 'delphine.laguette@ib-energy.com', password: 'EnergyDelphine!' },
+  { email: 'delphine.laguette@ibl-energy.com', password: 'EnergyDelphine!' },
   { email: 'louise.desvaux@ibl-energy.com',   password: 'EnergyLouise!'   },
 ];
 
