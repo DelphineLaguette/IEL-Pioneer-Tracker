@@ -28,7 +28,7 @@ export default function Navbar() {
           <img
             src="https://i.imgur.com/eaBRYQP.png"
             alt="IBL Energy"
-            className="h-44 w-auto object-contain flex-shrink-0"
+            className="h-56 w-auto object-contain flex-shrink-0"
           />
           <div className="leading-none">
             <p className="font-bold text-white text-sm tracking-tight">Pioneer Tracker</p>
