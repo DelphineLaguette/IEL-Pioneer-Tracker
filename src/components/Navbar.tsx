@@ -30,12 +30,7 @@ export default function Navbar() {
             alt="IBL Energy"
             style={{ height: '120px', width: 'auto', objectFit: 'contain', flexShrink: 0 }}
           />
-          <div className="leading-none">
-            <p className="font-bold text-white text-sm tracking-tight">Pioneer Tracker</p>
-            <p className="text-xs mt-0.5" style={{ color: IBL_CYAN, opacity: 0.8 }}>
-              IBL Energy · Leadership Development
-            </p>
-          </div>
+          <p className="font-bold text-white text-sm tracking-tight">Pioneer Tracker</p>
         </Link>
 
         {/* Spacer */}

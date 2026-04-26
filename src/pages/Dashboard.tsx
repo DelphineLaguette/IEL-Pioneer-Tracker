@@ -96,42 +96,12 @@ export default function Dashboard() {
             <div className="h-8 w-px bg-white/20" />
             <StatPill value={LEADERS.length} label="Total pioneers" />
             <div className="h-8 w-px bg-white/20" />
-            <StatPill value={data.checkIns.length} label="Check-ins done" color={IBL_CYAN} />
+            <StatPill value={data.checkIns.length + data.biWeeklyCheckIns.length} label="Check-ins done" color={IBL_CYAN} />
           </div>
         </div>
 
         {/* Cyan bottom accent */}
         <div className="h-1 w-full" style={{ backgroundColor: IBL_CYAN }} />
-      </div>
-
-      {/* ── Scale Legend ────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-          Self-Rating Scale
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { n: 1, label: 'Rarely',       bg: '#fee2e2', fg: '#b91c1c' },
-            { n: 2, label: 'Sometimes',     bg: '#ffedd5', fg: '#c2410c' },
-            { n: 3, label: 'Often',         bg: '#fef9c3', fg: '#a16207' },
-            { n: 4, label: 'Strongly',      bg: '#dbeafe', fg: '#1d4ed8' },
-            { n: 5, label: 'Consistently',  bg: '#dcfce7', fg: '#15803d' },
-          ].map(({ n, label, bg, fg }) => (
-            <span
-              key={n}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={{ backgroundColor: bg, color: fg }}
-            >
-              <span
-                className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold"
-                style={{ fontSize: 9, backgroundColor: fg }}
-              >
-                {n}
-              </span>
-              {label}
-            </span>
-          ))}
-        </div>
       </div>
 
       {/* ── Leader Cards ────────────────────────────────────────── */}
