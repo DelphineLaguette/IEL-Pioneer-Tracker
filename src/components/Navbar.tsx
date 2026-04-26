@@ -24,13 +24,12 @@ export default function Navbar() {
         )}
 
         <Link to="/" className="flex items-center gap-2.5 select-none">
-          {/* Logo mark */}
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-extrabold text-xs tracking-tight"
-            style={{ backgroundColor: IBL_CYAN, color: IBL_NAVY }}
-          >
-            IEL
-          </div>
+          {/* Logo */}
+          <img
+            src="https://i.imgur.com/eaBRYQP.png"
+            alt="IBL Energy"
+            className="h-8 w-auto object-contain flex-shrink-0"
+          />
           <div className="leading-none">
             <p className="font-bold text-white text-sm tracking-tight">Pioneer Tracker</p>
             <p className="text-xs mt-0.5" style={{ color: IBL_CYAN, opacity: 0.8 }}>
