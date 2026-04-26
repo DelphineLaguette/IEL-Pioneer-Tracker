@@ -9,7 +9,7 @@ export default function Navbar() {
 
   return (
     <nav style={{ backgroundColor: IBL_NAVY }} className="sticky top-0 z-50 shadow-lg">
-      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-3">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
         {!isHome && (
           <Link
             to="/"
@@ -28,7 +28,7 @@ export default function Navbar() {
           <img
             src="https://i.imgur.com/eaBRYQP.png"
             alt="IBL Energy"
-            className="h-11 w-auto object-contain flex-shrink-0"
+            className="h-44 w-auto object-contain flex-shrink-0"
           />
           <div className="leading-none">
             <p className="font-bold text-white text-sm tracking-tight">Pioneer Tracker</p>
