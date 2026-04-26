@@ -318,10 +318,12 @@ function LeaderRow({
   leader,
   sp,
   checkIns,
+  biWeeklyCount = 0,
 }: {
   leader: ReturnType<typeof getLeader> & object;
   sp: StartingPoint | undefined;
   checkIns: CheckIn[];
+  biWeeklyCount?: number;
 }) {
   const sorted    = [...checkIns].sort(
     (a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime(),
@@ -362,8 +364,8 @@ function LeaderRow({
       </div>
 
       <div className="w-20 flex-shrink-0 text-center">
-        <p className="text-xl font-extrabold" style={{ color: IBL_NAVY }}>{checkIns.length}</p>
-        <p className="text-xs text-gray-400 leading-none">check-in{checkIns.length !== 1 ? 's' : ''}</p>
+        <p className="text-xl font-extrabold" style={{ color: IBL_NAVY }}>{checkIns.length + biWeeklyCount}</p>
+        <p className="text-xs text-gray-400 leading-none">check-in{(checkIns.length + biWeeklyCount) !== 1 ? 's' : ''}</p>
       </div>
 
       <div className="w-20 flex-shrink-0 text-center">
@@ -465,7 +467,7 @@ export default function Admin() {
     .filter(ci => !filterLeader || ci.leaderId === filterLeader)
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
 
-  const [showAll, setShowAll] = useState(false);
+  const [showAll, setShowAll] = useState(true);
   const visible = showAll ? filtered : filtered.slice(0, 3);
 
   // Chronological self-ratings per leader (for sparkline)
@@ -488,9 +490,6 @@ export default function Admin() {
         <div className="absolute rounded-full opacity-10 pointer-events-none"
              style={{ width: 120, height: 120, backgroundColor: IBL_PINK, bottom: -30, right: 220 }} />
         <div className="relative z-10 p-8">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: IBL_CYAN }}>
-            IBL Energy · IEL Programme
-          </p>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">Admin Dashboard</h1>
           <p className="text-sm text-white/60 mt-1">
             Full visibility into every pioneer's progress across the 6 leadership principles
@@ -622,9 +621,10 @@ export default function Admin() {
 
         <div className="p-3 space-y-1">
           {LEADERS.map(leader => {
-            const sp       = data.startingPoints.find(s => s.leaderId === leader.id);
-            const checkIns = data.checkIns.filter(c => c.leaderId === leader.id);
-            return <LeaderRow key={leader.id} leader={leader} sp={sp} checkIns={checkIns} />;
+            const sp             = data.startingPoints.find(s => s.leaderId === leader.id);
+            const checkIns       = data.checkIns.filter(c => c.leaderId === leader.id);
+            const biWeeklyCount  = data.biWeeklyCheckIns.filter(b => b.leaderId === leader.id).length;
+            return <LeaderRow key={leader.id} leader={leader} sp={sp} checkIns={checkIns} biWeeklyCount={biWeeklyCount} />;
           })}
         </div>
       </div>

@@ -80,9 +80,6 @@ export default function Dashboard() {
         />
 
         <div className="relative z-10 p-8">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: IBL_CYAN }}>
-            IBL Energy · IEL Programme
-          </p>
           <h1 className="text-3xl font-extrabold text-white tracking-tight mb-1">
             Pioneer Tracker
           </h1>
