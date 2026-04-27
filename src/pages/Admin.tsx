@@ -467,6 +467,43 @@ function LeaderRow({
   );
 }
 
+// ── Email helper ──────────────────────────────────────────────────────────────
+
+function openFocusEmail({
+  toEmail,
+  leaderName,
+  week,
+  focus,
+  principleName,
+  nextCheckInDate,
+}: {
+  toEmail: string;
+  leaderName: string;
+  week: string;
+  focus: string;
+  principleName: string;
+  nextCheckInDate: string;
+}) {
+  const nextDate = nextCheckInDate
+    ? new Date(nextCheckInDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '—';
+
+  const subject = encodeURIComponent(`Your Leadership Focus — ${principleName}`);
+  const body = encodeURIComponent(
+    `Dear ${leaderName},\n\n` +
+    `Following your bi-weekly check-in (Week ${week}), here is your focus for the next 30 days:\n\n` +
+    `──────────────────────────\n` +
+    `${focus}\n` +
+    `──────────────────────────\n\n` +
+    `Principle in focus: ${principleName}\n` +
+    `Next check-in: ${nextDate}\n\n` +
+    `Keep up the great work!\n\n` +
+    `Best regards,\nIBL Energy — Pioneer Tracker`
+  );
+
+  window.open(`mailto:${toEmail}?subject=${subject}&body=${body}`, '_blank');
+}
+
 // ── Per-leader bi-weekly panel ────────────────────────────────────────────────
 
 function LeaderBiWeeklyPanel({
@@ -494,28 +531,33 @@ function LeaderBiWeeklyPanel({
   const latest = sorted[0];
   const latestStatus = BW_STATUS_CONFIG[latest?.status] ?? BW_STATUS_CONFIG['progressing'];
   const sparklineRatings = [...sorted].reverse().map(b => b.selfRating).filter(r => r > 0);
+  const leaderEmail = sp?.email ?? '';
+  const latestFocus = latest?.focusNextMonth ?? '';
+  const latestPrinciple = getPrinciple(latest?.principleFocus);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-      {/* ── Leader header (click to collapse) ── */}
-      <button
-        type="button"
-        onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors text-left"
-      >
-        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white
-                        font-bold text-sm flex-shrink-0"
-             style={{ backgroundColor: IBL_NAVY }}>
-          {leader.initials}
-        </div>
+      {/* ── Leader header ── */}
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+        {/* Clickable area (collapse) */}
+        <button
+          type="button"
+          onClick={() => setExpanded(v => !v)}
+          className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+        >
+          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white
+                          font-bold text-sm flex-shrink-0"
+               style={{ backgroundColor: IBL_NAVY }}>
+            {leader.initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-gray-900">{leader.name}</p>
+            <p className="text-xs text-gray-400">{sp?.team ?? '—'}</p>
+          </div>
+        </button>
 
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-gray-900">{leader.name}</p>
-          <p className="text-xs text-gray-400">{sp?.team ?? '—'}</p>
-        </div>
-
-        <div className="flex items-center gap-5 flex-shrink-0">
+        <div className="flex items-center gap-4 flex-shrink-0">
           <div className="text-center">
             <p className="text-lg font-extrabold leading-none" style={{ color: IBL_NAVY }}>
               {sorted.length}
@@ -535,9 +577,34 @@ function LeaderBiWeeklyPanel({
             {latestStatus.label}
           </span>
           <Sparkline ratings={sparklineRatings} />
-          <span className="text-gray-300 text-xs">{expanded ? '▲' : '▼'}</span>
+
+          {/* ── Email focus button ── */}
+          {latestFocus && leaderEmail && (
+            <button
+              type="button"
+              title={`Send latest focus to ${leader.name}`}
+              onClick={() => openFocusEmail({
+                toEmail: leaderEmail,
+                leaderName: leader.name,
+                week: latest.week,
+                focus: latestFocus,
+                principleName: latestPrinciple
+                  ? `P${latestPrinciple.number} — ${latestPrinciple.title}`
+                  : latest.principleFocus,
+                nextCheckInDate: latest.nextCheckInDate,
+              })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                         transition-all hover:opacity-90 flex-shrink-0"
+              style={{ backgroundColor: IBL_NAVY, color: 'white' }}
+            >
+              ✉ Send Focus
+            </button>
+          )}
+
+          <button type="button" onClick={() => setExpanded(v => !v)}
+                  className="text-gray-300 text-xs px-1">{expanded ? '▲' : '▼'}</button>
         </div>
-      </button>
+      </div>
 
       {/* ── Check-in table ── */}
       {expanded && (
@@ -667,10 +734,36 @@ function LeaderBiWeeklyPanel({
                         {bw.focusNextMonth && (
                           <div className="p-3 rounded-xl border-l-4 sm:col-span-2"
                                style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
-                            <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
-                              Focus for next month
-                            </p>
-                            <p className="text-sm text-gray-800">{bw.focusNextMonth}</p>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
+                                  Focus for next month
+                                </p>
+                                <p className="text-sm text-gray-800">{bw.focusNextMonth}</p>
+                              </div>
+                              {leaderEmail && (
+                                <button
+                                  type="button"
+                                  title={`Email this focus to ${leader.name}`}
+                                  onClick={() => openFocusEmail({
+                                    toEmail: leaderEmail,
+                                    leaderName: leader.name,
+                                    week: bw.week,
+                                    focus: bw.focusNextMonth,
+                                    principleName: (() => {
+                                      const p = getPrinciple(bw.principleFocus);
+                                      return p ? `P${p.number} — ${p.title}` : bw.principleFocus;
+                                    })(),
+                                    nextCheckInDate: bw.nextCheckInDate,
+                                  })}
+                                  className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg
+                                             text-xs font-bold transition-all hover:opacity-90"
+                                  style={{ backgroundColor: IBL_NAVY, color: 'white' }}
+                                >
+                                  ✉ Send
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
