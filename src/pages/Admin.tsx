@@ -467,6 +467,236 @@ function LeaderRow({
   );
 }
 
+// ── Per-leader bi-weekly panel ────────────────────────────────────────────────
+
+function LeaderBiWeeklyPanel({
+  leader,
+  sp,
+  bwCheckIns,
+}: {
+  leader: { id: string; name: string; initials: string };
+  sp: StartingPoint | undefined;
+  bwCheckIns: BiWeeklyCheckIn[];
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  const sorted = [...bwCheckIns].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  if (sorted.length === 0) return null;
+
+  const ratings = sorted.map(b => b.selfRating).filter(r => r > 0);
+  const avgRating = ratings.length
+    ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
+    : null;
+  const latest = sorted[0];
+  const latestStatus = BW_STATUS_CONFIG[latest?.status] ?? BW_STATUS_CONFIG['progressing'];
+  const sparklineRatings = [...sorted].reverse().map(b => b.selfRating).filter(r => r > 0);
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+      {/* ── Leader header (click to collapse) ── */}
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors text-left"
+      >
+        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white
+                        font-bold text-sm flex-shrink-0"
+             style={{ backgroundColor: IBL_NAVY }}>
+          {leader.initials}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-gray-900">{leader.name}</p>
+          <p className="text-xs text-gray-400">{sp?.team ?? '—'}</p>
+        </div>
+
+        <div className="flex items-center gap-5 flex-shrink-0">
+          <div className="text-center">
+            <p className="text-lg font-extrabold leading-none" style={{ color: IBL_NAVY }}>
+              {sorted.length}
+            </p>
+            <p className="text-xs text-gray-400">check-in{sorted.length !== 1 ? 's' : ''}</p>
+          </div>
+          {avgRating && (
+            <div className="text-center">
+              <p className="text-lg font-extrabold leading-none" style={{ color: IBL_CYAN }}>
+                {avgRating}
+              </p>
+              <p className="text-xs text-gray-400">avg / 5</p>
+            </div>
+          )}
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full hidden sm:inline"
+                style={{ backgroundColor: latestStatus.bg, color: latestStatus.fg }}>
+            {latestStatus.label}
+          </span>
+          <Sparkline ratings={sparklineRatings} />
+          <span className="text-gray-300 text-xs">{expanded ? '▲' : '▼'}</span>
+        </div>
+      </button>
+
+      {/* ── Check-in table ── */}
+      {expanded && (
+        <div className="border-t border-gray-100">
+
+          {/* Column headers */}
+          <div className="hidden sm:flex items-center gap-2 px-5 py-2 bg-slate-50 border-b border-gray-100
+                          text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            <div className="w-14 flex-shrink-0">Week</div>
+            <div className="w-24 flex-shrink-0">Date</div>
+            <div className="w-32 flex-shrink-0">Principle</div>
+            <div className="w-28 flex-shrink-0">Status</div>
+            <div className="w-16 flex-shrink-0 text-center">Rating</div>
+            <div className="w-20 flex-shrink-0 text-center">Confidence</div>
+            <div className="flex-1">Key Actions</div>
+            <div className="w-20 flex-shrink-0 text-right">Support</div>
+            <div className="w-6 flex-shrink-0" />
+          </div>
+
+          {sorted.map((bw, idx) => {
+            const principle  = getPrinciple(bw.principleFocus);
+            const status     = BW_STATUS_CONFIG[bw.status] ?? BW_STATUS_CONFIG['progressing'];
+            const ratingC    = RATING_COLORS[bw.selfRating] ?? { bg: '#f3f4f6', fg: '#6b7280' };
+            const confC      = RATING_COLORS[bw.confidenceLevel] ?? { bg: '#f3f4f6', fg: '#6b7280' };
+            const isOpen     = expandedRow === bw.id;
+
+            return (
+              <div key={bw.id} className={idx % 2 === 1 ? 'bg-slate-50/40' : ''}>
+
+                {/* Summary row */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedRow(isOpen ? null : bw.id)}
+                  className="w-full flex items-center gap-2 px-5 py-3 hover:bg-blue-50/30
+                             transition-colors text-left border-b border-gray-50"
+                >
+                  <div className="w-14 flex-shrink-0">
+                    <span className="text-sm font-bold" style={{ color: IBL_NAVY }}>Wk {bw.week}</span>
+                  </div>
+                  <div className="w-24 flex-shrink-0 text-xs text-gray-400">
+                    {formatDate(bw.createdAt)}
+                  </div>
+                  <div className="w-32 flex-shrink-0">
+                    {principle ? (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+                        P{principle.number} {principle.shortTitle}
+                      </span>
+                    ) : <span className="text-xs text-gray-300">—</span>}
+                  </div>
+                  <div className="w-28 flex-shrink-0">
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: status.bg, color: status.fg }}>
+                      {status.label}
+                    </span>
+                  </div>
+                  <div className="w-16 flex-shrink-0 text-center">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: ratingC.bg, color: ratingC.fg }}>
+                      {bw.selfRating || '—'}/5
+                    </span>
+                  </div>
+                  <div className="w-20 flex-shrink-0 text-center">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: confC.bg, color: confC.fg }}>
+                      {bw.confidenceLevel || '—'}/5
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 truncate">{bw.keyActionsTaken || '—'}</p>
+                  </div>
+                  <div className="w-20 flex-shrink-0 text-right">
+                    {bw.supportNeeded
+                      ? <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                              style={{ backgroundColor: '#fff0f7', color: IBL_PINK }}>⚠ Yes</span>
+                      : <span className="text-xs text-gray-200">—</span>}
+                  </div>
+                  <div className="w-6 flex-shrink-0 text-gray-300 text-xs text-right">
+                    {isOpen ? '▲' : '▼'}
+                  </div>
+                </button>
+
+                {/* Expanded detail */}
+                {isOpen && (
+                  <div className="px-5 py-4 border-b border-gray-100 space-y-4"
+                       style={{ backgroundColor: '#f8faff' }}>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormDivider title="Weekly Progress" />
+                      <div className="sm:col-span-2" />
+                      <TextField label="Key actions taken"    value={bw.keyActionsTaken} />
+                      <TextField label="What went well"       value={bw.whatWentWell} />
+                      <TextField label="Challenges"           value={bw.challenges} />
+                      {bw.supportNeeded && (
+                        <div className="p-3 rounded-xl border sm:col-span-2"
+                             style={{ backgroundColor: '#fff8fb', borderColor: `${IBL_PINK}40` }}>
+                          <p className="text-xs font-semibold uppercase tracking-wide mb-1"
+                             style={{ color: IBL_PINK }}>Support needed</p>
+                          <p className="text-sm text-gray-800">{bw.typeOfSupportNeeded || '—'}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormDivider title="Principle Focus" />
+                      <div className="sm:col-span-2" />
+                      <TextField label="Why this principle"       value={bw.whyThisPrinciple} />
+                      <TextField label="Behaviours to practice"   value={bw.behavioursTopractice} />
+                      <TextField label="Success measure"          value={bw.successMeasure} />
+                      <TextField label="Accountability partner"   value={bw.accountabilityPartner} />
+                      {bw.overallProgressComment && (
+                        <TextField label="Overall progress comment" value={bw.overallProgressComment} />
+                      )}
+                    </div>
+
+                    {(bw.whatDidWell || bw.whereFellShort || bw.concreteExample || bw.mainObstacle ||
+                      bw.feedbackFromTeam || bw.feedbackFromManager || bw.focusNextMonth) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormDivider title="Monthly Reflection" />
+                        <div className="sm:col-span-2" />
+                        <TextField label="What I did well"        value={bw.whatDidWell} />
+                        <TextField label="Where I fell short"     value={bw.whereFellShort} />
+                        <TextField label="Concrete example"       value={bw.concreteExample} />
+                        <TextField label="Main obstacle"          value={bw.mainObstacle} />
+                        <TextField label="Feedback from team"     value={bw.feedbackFromTeam} />
+                        <TextField label="Feedback from manager"  value={bw.feedbackFromManager} />
+                        {bw.focusNextMonth && (
+                          <div className="p-3 rounded-xl border-l-4 sm:col-span-2"
+                               style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
+                            <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
+                              Focus for next month
+                            </p>
+                            <p className="text-sm text-gray-800">{bw.focusNextMonth}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {bw.nextCheckInDate && (
+                      <p className="text-xs text-gray-400">
+                        Next check-in:{' '}
+                        <span className="font-semibold text-gray-700">
+                          {new Date(bw.nextCheckInDate).toLocaleDateString('en-GB', {
+                            day: 'numeric', month: 'long', year: 'numeric',
+                          })}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Admin page ───────────────────────────────────────────────────────────
 
 export default function Admin() {
@@ -658,6 +888,23 @@ export default function Admin() {
           })}
         </div>
       </div>
+
+      {/* ── Bi-Weekly Check-In Tracker ──────────────────────────────────────── */}
+      {data.biWeeklyCheckIns.length > 0 && (
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Bi-Weekly Check-In Tracker</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Per-leader history — click a row to expand full details</p>
+          </div>
+          {LEADERS.map(leader => {
+            const sp = data.startingPoints.find(s => s.leaderId === leader.id);
+            const bwCheckIns = data.biWeeklyCheckIns.filter(b => b.leaderId === leader.id);
+            return (
+              <LeaderBiWeeklyPanel key={leader.id} leader={leader} sp={sp} bwCheckIns={bwCheckIns} />
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Principle Focus Distribution ─────────────────────────────────────── */}
       {totalCheckIns > 0 && (
