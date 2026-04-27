@@ -476,23 +476,41 @@ export default function Admin() {
   const completedReflections = LEADERS.filter(l =>
     data.startingPoints.some(s => s.leaderId === l.id),
   ).length;
-  const allRatings    = data.checkIns.map(c => c.selfRating).filter(r => r > 0);
-  const avgRating     = allRatings.length
+  const totalCheckIns = data.checkIns.length + data.biWeeklyCheckIns.length;
+  const allRatings = [
+    ...data.checkIns.map(c => c.selfRating),
+    ...data.biWeeklyCheckIns.map(b => b.selfRating),
+  ].filter(r => r > 0);
+  const avgRating = allRatings.length
     ? (allRatings.reduce((a, b) => a + b, 0) / allRatings.length).toFixed(1)
     : '—';
-  const supportCount  = data.checkIns.filter(c => c.supportNeeded).length;
-  const improvedCount = data.checkIns.filter(c => c.progressVersusLastMonth === 'improved').length;
+  const supportCount =
+    data.checkIns.filter(c => c.supportNeeded).length +
+    data.biWeeklyCheckIns.filter(b => b.supportNeeded).length;
+  const improvedCount =
+    data.checkIns.filter(c => c.progressVersusLastMonth === 'improved').length +
+    data.biWeeklyCheckIns.filter(b => b.status === 'on-track').length;
 
   // ── Principle distribution ──────────────────────────────────────────────────
   const principleCounts = PRINCIPLES.map(p => ({
     principle: p,
-    count: data.checkIns.filter(c => c.selectedPrinciple === p.id).length,
+    count:
+      data.checkIns.filter(c => c.selectedPrinciple === p.id).length +
+      data.biWeeklyCheckIns.filter(b => b.principleFocus === p.id).length,
   }));
 
   // ── Support alerts ──────────────────────────────────────────────────────────
-  const supportAlerts = data.checkIns
-    .filter(c => c.supportNeeded)
-    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+  type SupportAlert = { id: string; leaderId: string; date: string; principle: string; support: string };
+  const supportAlerts: SupportAlert[] = [
+    ...data.checkIns.filter(c => c.supportNeeded).map(c => ({
+      id: c.id, leaderId: c.leaderId, date: c.submittedAt,
+      principle: c.selectedPrinciple, support: c.typeOfSupportNeeded,
+    })),
+    ...data.biWeeklyCheckIns.filter(b => b.supportNeeded).map(b => ({
+      id: b.id, leaderId: b.leaderId, date: b.createdAt,
+      principle: b.principleFocus, support: b.typeOfSupportNeeded,
+    })),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <div className="space-y-6">
@@ -542,7 +560,7 @@ export default function Admin() {
         {([
           { label: 'Pioneers',        value: LEADERS.length,       sub: 'total',          color: IBL_NAVY  },
           { label: 'Reflections',     value: completedReflections, sub: 'completed',       color: '#15803d' },
-          { label: 'Check-Ins',       value: data.checkIns.length, sub: 'submitted',       color: IBL_CYAN  },
+          { label: 'Check-Ins',       value: totalCheckIns,        sub: 'submitted',       color: IBL_CYAN  },
           { label: 'Avg Self-Rating', value: avgRating,            sub: 'out of 5',        color: '#1d4ed8' },
           { label: 'Support Flags',   value: supportCount,         sub: 'need attention',  color: '#be185d' },
         ] as const).map(s => (
@@ -569,11 +587,11 @@ export default function Admin() {
             </span>
           </div>
           <div className="p-4 space-y-3">
-            {supportAlerts.map(ci => {
-              const leader    = getLeader(ci.leaderId);
-              const principle = getPrinciple(ci.selectedPrinciple);
+            {supportAlerts.map(alert => {
+              const leader    = getLeader(alert.leaderId);
+              const principle = getPrinciple(alert.principle);
               return (
-                <div key={ci.id}
+                <div key={alert.id}
                      className="flex items-start gap-3 p-4 rounded-xl border"
                      style={{ backgroundColor: '#fff8fb', borderColor: `${IBL_PINK}30` }}>
                   <div className="w-10 h-10 rounded-full flex items-center justify-center text-white
@@ -582,23 +600,20 @@ export default function Admin() {
                     {leader?.initials}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 text-sm">
-                      {leader?.name}
-                      <span className="font-normal text-gray-400"> · {ci.month}</span>
-                    </p>
+                    <p className="font-bold text-gray-900 text-sm">{leader?.name}</p>
                     {principle && (
                       <p className="text-xs text-gray-500 mt-0.5">
                         P{principle.number} — {principle.shortTitle}
                       </p>
                     )}
-                    {ci.typeOfSupportNeeded && (
+                    {alert.support && (
                       <p className="text-sm text-gray-800 mt-2 p-2 rounded-lg"
                          style={{ backgroundColor: '#fff0f7' }}>
-                        "{ci.typeOfSupportNeeded}"
+                        "{alert.support}"
                       </p>
                     )}
                   </div>
-                  <span className="text-xs text-gray-400 flex-shrink-0">{formatDate(ci.submittedAt)}</span>
+                  <span className="text-xs text-gray-400 flex-shrink-0">{formatDate(alert.date)}</span>
                 </div>
               );
             })}
@@ -645,16 +660,16 @@ export default function Admin() {
       </div>
 
       {/* ── Principle Focus Distribution ─────────────────────────────────────── */}
-      {data.checkIns.length > 0 && (
+      {totalCheckIns > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <h2 className="font-bold text-gray-900 mb-1">Principle Focus Distribution</h2>
           <p className="text-xs text-gray-400 mb-5">
             How often each principle has been selected across all check-ins
-            {improvedCount > 0 && ` · ${improvedCount} of ${data.checkIns.length} check-ins show improvement`}
+            {improvedCount > 0 && ` · ${improvedCount} of ${totalCheckIns} check-ins show improvement`}
           </p>
           <div className="space-y-3">
             {principleCounts.map(({ principle: p, count }) => {
-              const pct = data.checkIns.length > 0 ? (count / data.checkIns.length) * 100 : 0;
+              const pct = totalCheckIns > 0 ? (count / totalCheckIns) * 100 : 0;
               return (
                 <div key={p.id} className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-white
