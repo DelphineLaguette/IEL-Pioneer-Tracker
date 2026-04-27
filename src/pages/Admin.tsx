@@ -4,7 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { LEADERS, getLeader } from '../data/leaders';
 import { exportToExcel, exportToPowerPoint } from '../utils/exports';
 import { PRINCIPLES, getPrinciple } from '../data/principles';
-import type { CheckIn, StartingPoint } from '../types';
+import type { CheckIn, StartingPoint, BiWeeklyCheckIn } from '../types';
 
 // ── Export button with loading state ─────────────────────────────────────────
 function ExportButton({ label, icon, onClick }: { label: string; icon: string; onClick: () => Promise<void> }) {
@@ -84,6 +84,12 @@ const PROGRESS_CONFIG = {
   improved: { label: '↑ Improved',        bg: '#dcfce7', fg: '#15803d' },
   same:     { label: '→ About the same',  bg: '#fef9c3', fg: '#a16207' },
   declined: { label: '↓ Need to improve', bg: '#fee2e2', fg: '#b91c1c' },
+};
+
+const BW_STATUS_CONFIG = {
+  'on-track':        { label: 'On Track',        bg: '#dcfce7', fg: '#15803d' },
+  'progressing':     { label: 'Progressing',      bg: '#fef9c3', fg: '#a16207' },
+  'needs-attention': { label: 'Needs Attention',  bg: '#fee2e2', fg: '#b91c1c' },
 };
 
 function formatDate(iso: string) {
@@ -318,23 +324,51 @@ function LeaderRow({
   leader,
   sp,
   checkIns,
-  biWeeklyCount = 0,
+  biWeeklyCheckIns = [],
 }: {
   leader: ReturnType<typeof getLeader> & object;
   sp: StartingPoint | undefined;
   checkIns: CheckIn[];
-  biWeeklyCount?: number;
+  biWeeklyCheckIns?: BiWeeklyCheckIn[];
 }) {
-  const sorted    = [...checkIns].sort(
+  const sortedCI = [...checkIns].sort(
     (a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime(),
   );
-  const latest    = sorted[sorted.length - 1];
-  const ratings   = checkIns.map(c => c.selfRating).filter(r => r > 0);
-  const avgRating = ratings.length > 0
-    ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
+  const sortedBW = [...biWeeklyCheckIns].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+  const latestCI = sortedCI[sortedCI.length - 1];
+  const latestBW = sortedBW[sortedBW.length - 1];
+
+  // Pick the most recent record across both types for Last Progress / Next Check-In / Support
+  const latestDate = (r: { date: string; type: 'ci' | 'bw' } | null, cand: string, type: 'ci' | 'bw') =>
+    !r || new Date(cand) > new Date(r.date) ? { date: cand, type } : r;
+  let latestRef: { date: string; type: 'ci' | 'bw' } | null = null;
+  if (latestCI) latestRef = latestDate(latestRef, latestCI.submittedAt, 'ci');
+  if (latestBW) latestRef = latestDate(latestRef, latestBW.createdAt, 'bw');
+
+  // Avg rating — combine both
+  const allRatings = [
+    ...checkIns.map(c => c.selfRating),
+    ...biWeeklyCheckIns.map(b => b.selfRating),
+  ].filter(r => r > 0);
+  const avgRating = allRatings.length > 0
+    ? (allRatings.reduce((a, b) => a + b, 0) / allRatings.length).toFixed(1)
     : null;
-  const needsSupport = latest?.supportNeeded ?? false;
-  const principles   = [...new Set(checkIns.map(c => c.selectedPrinciple).filter(Boolean))];
+
+  // Support — either type flags it
+  const needsSupport = (latestRef?.type === 'ci' ? latestCI?.supportNeeded : latestBW?.supportNeeded) ?? false;
+
+  // Principles — union of both types
+  const principles = [...new Set([
+    ...checkIns.map(c => c.selectedPrinciple),
+    ...biWeeklyCheckIns.map(b => b.principleFocus),
+  ].filter(Boolean))];
+
+  // Next check-in — most recent nextCheckInDate from either type
+  const nextCheckInDate = [latestCI?.nextCheckInDate, latestBW?.nextCheckInDate]
+    .filter(Boolean)
+    .sort((a, b) => new Date(b!).getTime() - new Date(a!).getTime())[0] ?? null;
 
   return (
     <div className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors
@@ -364,8 +398,8 @@ function LeaderRow({
       </div>
 
       <div className="w-20 flex-shrink-0 text-center">
-        <p className="text-xl font-extrabold" style={{ color: IBL_NAVY }}>{checkIns.length + biWeeklyCount}</p>
-        <p className="text-xs text-gray-400 leading-none">check-in{(checkIns.length + biWeeklyCount) !== 1 ? 's' : ''}</p>
+        <p className="text-xl font-extrabold" style={{ color: IBL_NAVY }}>{checkIns.length + biWeeklyCheckIns.length}</p>
+        <p className="text-xs text-gray-400 leading-none">check-in{(checkIns.length + biWeeklyCheckIns.length) !== 1 ? 's' : ''}</p>
       </div>
 
       <div className="w-20 flex-shrink-0 text-center">
@@ -378,11 +412,17 @@ function LeaderRow({
       </div>
 
       <div className="w-36 flex-shrink-0">
-        {latest ? (
+        {latestRef?.type === 'ci' && latestCI ? (
           <span className="text-xs font-semibold px-2 py-1 rounded-full inline-block"
-                style={{ backgroundColor: PROGRESS_CONFIG[latest.progressVersusLastMonth].bg,
-                         color: PROGRESS_CONFIG[latest.progressVersusLastMonth].fg }}>
-            {PROGRESS_CONFIG[latest.progressVersusLastMonth].label}
+                style={{ backgroundColor: PROGRESS_CONFIG[latestCI.progressVersusLastMonth].bg,
+                         color: PROGRESS_CONFIG[latestCI.progressVersusLastMonth].fg }}>
+            {PROGRESS_CONFIG[latestCI.progressVersusLastMonth].label}
+          </span>
+        ) : latestRef?.type === 'bw' && latestBW ? (
+          <span className="text-xs font-semibold px-2 py-1 rounded-full inline-block"
+                style={{ backgroundColor: BW_STATUS_CONFIG[latestBW.status].bg,
+                         color: BW_STATUS_CONFIG[latestBW.status].fg }}>
+            {BW_STATUS_CONFIG[latestBW.status].label}
           </span>
         ) : <span className="text-xs text-gray-300">No check-ins</span>}
       </div>
@@ -401,27 +441,20 @@ function LeaderRow({
 
       {/* Next check-in date */}
       <div className="w-32 flex-shrink-0">
-        {latest?.nextCheckInDate ? (
+        {nextCheckInDate ? (
           <div>
             <p className="text-xs font-semibold text-gray-800">
-              {new Date(latest.nextCheckInDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              {new Date(nextCheckInDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
             </p>
             {(() => {
-              const days = Math.ceil(
-                (new Date(latest.nextCheckInDate).getTime() - Date.now()) / 86400000,
-              );
-              if (days < 0)
-                return <p className="text-xs font-semibold" style={{ color: IBL_PINK }}>Overdue</p>;
-              if (days === 0)
-                return <p className="text-xs font-semibold" style={{ color: '#d97706' }}>Today</p>;
-              if (days <= 7)
-                return <p className="text-xs" style={{ color: '#d97706' }}>In {days}d</p>;
+              const days = Math.ceil((new Date(nextCheckInDate).getTime() - Date.now()) / 86400000);
+              if (days < 0) return <p className="text-xs font-semibold" style={{ color: IBL_PINK }}>Overdue</p>;
+              if (days === 0) return <p className="text-xs font-semibold" style={{ color: '#d97706' }}>Today</p>;
+              if (days <= 7) return <p className="text-xs" style={{ color: '#d97706' }}>In {days}d</p>;
               return <p className="text-xs text-gray-400">In {days}d</p>;
             })()}
           </div>
-        ) : (
-          <span className="text-xs text-gray-300">—</span>
-        )}
+        ) : <span className="text-xs text-gray-300">—</span>}
       </div>
 
       <div className="w-24 flex-shrink-0 text-right">
@@ -438,7 +471,6 @@ function LeaderRow({
 
 export default function Admin() {
   const { data } = useStore();
-  const [filterLeader, setFilterLeader] = useState('');
 
   // ── Overview stats ──────────────────────────────────────────────────────────
   const completedReflections = LEADERS.filter(l =>
@@ -461,23 +493,6 @@ export default function Admin() {
   const supportAlerts = data.checkIns
     .filter(c => c.supportNeeded)
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-
-  // ── Filtered check-ins ──────────────────────────────────────────────────────
-  const filtered = data.checkIns
-    .filter(ci => !filterLeader || ci.leaderId === filterLeader)
-    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-
-  const [showAll, setShowAll] = useState(true);
-  const visible = showAll ? filtered : filtered.slice(0, 3);
-
-  // Chronological self-ratings per leader (for sparkline)
-  const ratingsByLeader: Record<string, number[]> = {};
-  data.checkIns
-    .sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime())
-    .forEach(ci => {
-      if (!ratingsByLeader[ci.leaderId]) ratingsByLeader[ci.leaderId] = [];
-      ratingsByLeader[ci.leaderId].push(ci.selfRating);
-    });
 
   return (
     <div className="space-y-6">
@@ -623,8 +638,8 @@ export default function Admin() {
           {LEADERS.map(leader => {
             const sp             = data.startingPoints.find(s => s.leaderId === leader.id);
             const checkIns       = data.checkIns.filter(c => c.leaderId === leader.id);
-            const biWeeklyCount  = data.biWeeklyCheckIns.filter(b => b.leaderId === leader.id).length;
-            return <LeaderRow key={leader.id} leader={leader} sp={sp} checkIns={checkIns} biWeeklyCount={biWeeklyCount} />;
+            const biWeeklyCheckIns = data.biWeeklyCheckIns.filter(b => b.leaderId === leader.id);
+            return <LeaderRow key={leader.id} leader={leader} sp={sp} checkIns={checkIns} biWeeklyCheckIns={biWeeklyCheckIns} />;
           })}
         </div>
       </div>
@@ -666,63 +681,6 @@ export default function Admin() {
         </div>
       )}
 
-      {/* ── 30-Day Check-In Browser ──────────────────────────────────────────── */}
-      <div className="space-y-4">
-        {/* Header + filter */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">30-Day Leadership Check-Ins</h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {filtered.length} check-in{filtered.length !== 1 ? 's' : ''}
-              {filterLeader ? ` for ${getLeader(filterLeader)?.name}` : ' across all leaders'}
-            </p>
-          </div>
-          <div className="ml-auto">
-            <select
-              value={filterLeader}
-              onChange={e => setFilterLeader(e.target.value)}
-              className="border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white
-                         focus:outline-none focus:ring-2 focus:ring-[#00D0DA]"
-            >
-              <option value="">All leaders</option>
-              {LEADERS.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {/* Check-in cards */}
-        {filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-16">
-            <p className="text-gray-400 text-sm">
-              {data.checkIns.length === 0
-                ? 'No check-ins have been submitted yet.'
-                : 'No check-ins for this leader yet.'}
-            </p>
-          </div>
-        ) : (
-          <>
-            {visible.map(ci => (
-              <CheckInCard
-                key={ci.id}
-                ci={ci}
-                leaderRatings={ratingsByLeader[ci.leaderId] ?? [ci.selfRating]}
-              />
-            ))}
-            {filtered.length > 3 && (
-              <button
-                type="button"
-                onClick={() => setShowAll(v => !v)}
-                className="w-full py-3 rounded-2xl border border-gray-200 text-sm font-semibold
-                           text-gray-500 hover:bg-gray-50 transition-colors"
-              >
-                {showAll
-                  ? 'Show less'
-                  : `Show all ${filtered.length} check-ins`}
-              </button>
-            )}
-          </>
-        )}
-      </div>
 
     </div>
   );
