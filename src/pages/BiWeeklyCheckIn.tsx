@@ -492,7 +492,7 @@ export default function BiWeeklyCheckInPage() {
                   {LEADERS.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </Field>
-              <Field label="Week" required>
+              <Field label="Week">
                 <select
                   value={form.week}
                   onChange={e => set('week', e.target.value)}
@@ -549,11 +549,10 @@ export default function BiWeeklyCheckInPage() {
             {/* Part 2 */}
             <div className="space-y-4">
               <SectionHeader number={2} title="Principle Focus" />
-              <Field label="Selected leadership principle" required>
+              <Field label="Selected leadership principle">
                 <select
                   value={form.principleFocus}
                   onChange={e => set('principleFocus', e.target.value)}
-                  required
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white
                              focus:outline-none focus:ring-2 focus:ring-[#00D0DA]"
                 >
