@@ -3,7 +3,60 @@ import { useStore } from '../context/StoreContext';
 import { getLatestSP } from '../context/StoreContext';
 import { LEADERS, getLeader } from '../data/leaders';
 import { PRINCIPLES, getPrinciple } from '../data/principles';
+import { getLeaderEmail } from '../data/users';
 import type { BiWeeklyCheckIn } from '../types';
+
+// ── Bi-weekly summary mailto builder ─────────────────────────────────────────
+
+function buildBwMailto(bw: BiWeeklyCheckIn, leaderName: string, leaderEmail: string): string {
+  const principle = getPrinciple(bw.principleFocus);
+  const pl        = principle ? `P${principle.number} — ${principle.shortTitle}` : bw.principleFocus;
+  const STATUS: Record<string, string> = { 'on-track': 'On Track', 'progressing': 'Progressing', 'needs-attention': 'Needs Attention' };
+  const CONF: Record<number, string>   = { 1: 'Low — feeling stuck (1/5)', 2: 'Some doubt (2/5)', 3: 'Making progress (3/5)', 4: 'Good — on track (4/5)', 5: 'Fully confident (5/5)' };
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const subject = `IEL Pioneer — Bi-Weekly Check-In Summary (Week ${bw.week})`;
+  const rows: (string | undefined)[] = [
+    `Dear ${leaderName},`,
+    '',
+    `Here is a summary of your bi-weekly check-in for Week ${bw.week}.`,
+    '',
+    '── WEEKLY PROGRESS ─────────────────────────',
+    bw.keyActionsTaken ? `Key actions taken: ${bw.keyActionsTaken}` : undefined,
+    bw.whatWentWell    ? `What went well: ${bw.whatWentWell}` : undefined,
+    bw.challenges      ? `Challenges: ${bw.challenges}` : undefined,
+    bw.confidenceLevel > 0 ? `Confidence level: ${CONF[bw.confidenceLevel] ?? `${bw.confidenceLevel}/5`}` : undefined,
+    bw.supportNeeded && bw.typeOfSupportNeeded ? `Support needed: ${bw.typeOfSupportNeeded}` : undefined,
+    '',
+    '── PRINCIPLE FOCUS ─────────────────────────',
+    `Principle: ${pl}`,
+    bw.whyThisPrinciple     ? `Why: ${bw.whyThisPrinciple}` : undefined,
+    bw.behavioursTopractice ? `3 Behaviours: ${bw.behavioursTopractice}` : undefined,
+    bw.successMeasure       ? `Success measure: ${bw.successMeasure}` : undefined,
+    bw.accountabilityPartner ? `Accountability partner: ${bw.accountabilityPartner}` : undefined,
+    `Status: ${STATUS[bw.status] ?? bw.status}`,
+    `Self-rating: ${bw.selfRating}/5`,
+    bw.managerRating > 0    ? `Manager rating: ${bw.managerRating}/5` : undefined,
+    bw.overallProgressComment ? `Overall comment: ${bw.overallProgressComment}` : undefined,
+    '',
+    '── MONTHLY REFLECTION ──────────────────────',
+    bw.whatDidWell     ? `What I did well: ${bw.whatDidWell}` : undefined,
+    bw.whereFellShort  ? `Where I fell short: ${bw.whereFellShort}` : undefined,
+    bw.concreteExample ? `Concrete example: ${bw.concreteExample}` : undefined,
+    bw.mainObstacle    ? `Main obstacle: ${bw.mainObstacle}` : undefined,
+    bw.feedbackFromTeam    ? `Feedback from team: ${bw.feedbackFromTeam}` : undefined,
+    bw.feedbackFromManager ? `Feedback from manager: ${bw.feedbackFromManager}` : undefined,
+    bw.focusNextMonth  ? `Focus for next 30 days: ${bw.focusNextMonth}` : undefined,
+    '',
+    bw.nextCheckInDate ? `Next check-in: ${fmtDate(bw.nextCheckInDate)}` : undefined,
+    '',
+    'Keep up the great work!',
+    'IBL Energy — IEL Pioneer Programme',
+  ];
+
+  const body = rows.filter(Boolean).join('\n');
+  return `mailto:${encodeURIComponent(leaderEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
 
 const IBL_NAVY = '#002060';
 const IBL_CYAN  = '#00D0DA';
@@ -165,7 +218,7 @@ function LeaderCard({
 
 // ── History card ──────────────────────────────────────────────────────────────
 
-function HistoryCard({ bw }: { bw: BiWeeklyCheckIn }) {
+function HistoryCard({ bw, leaderEmail }: { bw: BiWeeklyCheckIn; leaderEmail: string }) {
   const [open, setOpen] = useState(false);
   const leader    = getLeader(bw.leaderId);
   const principle = getPrinciple(bw.principleFocus);
@@ -332,6 +385,24 @@ function HistoryCard({ bw }: { bw: BiWeeklyCheckIn }) {
             <p className="text-xs text-gray-400">
               Next check-in: <span className="font-semibold text-gray-700">{formatDateLong(bw.nextCheckInDate)}</span>
             </p>
+          )}
+
+          {/* Send full bi-weekly summary by email */}
+          {leaderEmail && (
+            <div className="pt-2 border-t border-gray-100 flex justify-end">
+              <a
+                href={buildBwMailto(bw, leader?.name ?? '', leaderEmail)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold
+                           transition-all hover:opacity-90 active:scale-95"
+                style={{ backgroundColor: IBL_CYAN, color: IBL_NAVY }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Send Full Summary
+              </a>
+            </div>
           )}
         </div>
       )}
@@ -690,7 +761,11 @@ export default function BiWeeklyCheckInPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map(bw => <HistoryCard key={bw.id} bw={bw} />)}
+            {filtered.map(bw => {
+              const sp    = data.startingPoints.find(s => s.leaderId === bw.leaderId);
+              const email = getLeaderEmail(bw.leaderId, sp?.email);
+              return <HistoryCard key={bw.id} bw={bw} leaderEmail={email} />;
+            })}
           </div>
         )}
       </div>

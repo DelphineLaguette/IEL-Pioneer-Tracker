@@ -6,6 +6,53 @@ import { exportToExcel, exportToPowerPoint } from '../utils/exports';
 import { PRINCIPLES, getPrinciple } from '../data/principles';
 import type { CheckIn, StartingPoint, BiWeeklyCheckIn } from '../types';
 
+// ── 30-day check-in mailto builder ───────────────────────────────────────────
+
+function build30DayMailto(ci: CheckIn, leaderName: string): string {
+  const principle = getPrinciple(ci.selectedPrinciple);
+  const principleLabel = principle ? `P${principle.number} — ${principle.shortTitle}` : ci.selectedPrinciple;
+  const PROGRESS: Record<string, string> = { improved: 'Improved', same: 'About the same', declined: 'Need to improve' };
+  const RATING: Record<number, string> = { 1: 'Rarely (1/5)', 2: 'Sometimes (2/5)', 3: 'Often (3/5)', 4: 'Strongly (4/5)', 5: 'Consistently (5/5)' };
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const subject = `IEL Pioneer — 30-Day Check-In Summary${ci.month ? ` (${ci.month})` : ''}`;
+  const rows: (string | undefined)[] = [
+    `Dear ${leaderName},`,
+    '',
+    `Here is a summary of your 30-day leadership check-in${ci.month ? ` for ${ci.month}` : ''}.`,
+    '',
+    '── MONTHLY FOCUS ──────────────────────────',
+    `Principle: ${principleLabel}`,
+    ci.whyThisPrinciple ? `Why: ${ci.whyThisPrinciple}` : undefined,
+    ci.threeBehaviours  ? `3 Behaviours: ${ci.threeBehaviours}` : undefined,
+    ci.successMeasure   ? `Success measure: ${ci.successMeasure}` : undefined,
+    ci.accountabilityPartner ? `Accountability partner: ${ci.accountabilityPartner}` : undefined,
+    '',
+    '── REFLECTION ──────────────────────────────',
+    ci.whatDidWell    ? `What went well: ${ci.whatDidWell}` : undefined,
+    ci.whereFellShort ? `Where I fell short: ${ci.whereFellShort}` : undefined,
+    ci.concreteExample ? `Concrete example: ${ci.concreteExample}` : undefined,
+    ci.mainObstacle   ? `Main obstacle: ${ci.mainObstacle}` : undefined,
+    '',
+    '── PROGRESS ────────────────────────────────',
+    ci.feedbackFromTeam    ? `Feedback from team: ${ci.feedbackFromTeam}` : undefined,
+    ci.feedbackFromManager ? `Feedback from manager: ${ci.feedbackFromManager}` : undefined,
+    `Self-rating: ${RATING[ci.selfRating] ?? `${ci.selfRating}/5`}`,
+    `Progress vs last month: ${PROGRESS[ci.progressVersusLastMonth] ?? ci.progressVersusLastMonth}`,
+    ci.supportNeeded && ci.typeOfSupportNeeded ? `Support needed: ${ci.typeOfSupportNeeded}` : undefined,
+    '',
+    '── NEXT STEPS ──────────────────────────────',
+    ci.focusForNext30Days ? `Next 30-day focus: ${ci.focusForNext30Days}` : undefined,
+    ci.nextCheckInDate    ? `Next check-in: ${fmtDate(ci.nextCheckInDate)}` : undefined,
+    '',
+    'Keep up the great work!',
+    'IBL Energy — IEL Pioneer Programme',
+  ];
+
+  const body = rows.filter(Boolean).join('\n');
+  return `mailto:${encodeURIComponent(ci.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 // ── Export button with loading state ─────────────────────────────────────────
 function ExportButton({ label, icon, onClick }: { label: string; icon: string; onClick: () => Promise<void> }) {
   const [loading, setLoading] = useState(false);
@@ -312,6 +359,24 @@ function CheckInCard({ ci, leaderRatings }: { ci: CheckIn; leaderRatings: number
             )}
           </FormField>
         </div>
+
+        {/* Send 30-day summary by email */}
+        {ci.email && (
+          <div className="pt-2 border-t border-gray-100 flex justify-end">
+            <a
+              href={build30DayMailto(ci, leader?.name ?? '')}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold
+                         transition-all hover:opacity-90 active:scale-95"
+              style={{ backgroundColor: IBL_CYAN, color: IBL_NAVY }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Send 30-Day Summary
+            </a>
+          </div>
+        )}
 
       </div>
     </div>
