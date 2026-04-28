@@ -5,22 +5,13 @@ import { SEED_STARTING_POINTS, SEED_BI_WEEKLY_CHECK_INS } from '../data/seedData
 import {
   collection, doc, setDoc, onSnapshot, writeBatch,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, FIREBASE_CONFIGURED } from '../lib/firebase';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'iel-pioneer-tracker';
 
 const defaultData: TrackerData = { startingPoints: [], checkIns: [], biWeeklyCheckIns: [] };
-
-function isFirebaseConfigured(): boolean {
-  try {
-    // If projectId is still the placeholder, Firebase isn't configured
-    return !db.app.options.projectId?.startsWith('REPLACE');
-  } catch {
-    return false;
-  }
-}
 
 // ── localStorage helpers (fallback when Firebase not configured) ──────────────
 
@@ -134,14 +125,9 @@ function LoadingScreen() {
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const useFirestore = isFirebaseConfigured();
-
-  // ── localStorage mode ────────────────────────────────────────────────────────
-  if (!useFirestore) {
+  if (!FIREBASE_CONFIGURED) {
     return <LocalStoreProvider>{children}</LocalStoreProvider>;
   }
-
-  // ── Firestore mode ───────────────────────────────────────────────────────────
   return <FirestoreProvider>{children}</FirestoreProvider>;
 }
 

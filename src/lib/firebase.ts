@@ -5,7 +5,7 @@ import { getFirestore } from 'firebase/firestore';
 // 1. Go to https://console.firebase.google.com
 // 2. Create a project → Add a Web App → copy the config object below
 // 3. In Firestore → Create database → Start in production mode
-// 4. In Firestore → Rules → paste the rules from the README and Publish
+// 4. In Firestore → Rules → set allow read, write: if true → Publish
 const firebaseConfig = {
   apiKey:            "REPLACE_WITH_YOUR_API_KEY",
   authDomain:        "REPLACE_WITH_YOUR_AUTH_DOMAIN",
@@ -15,5 +15,10 @@ const firebaseConfig = {
   appId:             "REPLACE_WITH_YOUR_APP_ID",
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+// Only initialise Firebase when real values have been pasted in
+export const FIREBASE_CONFIGURED =
+  !firebaseConfig.projectId.startsWith('REPLACE');
+
+export const db = FIREBASE_CONFIGURED
+  ? getFirestore(initializeApp(firebaseConfig))
+  : null as never;
