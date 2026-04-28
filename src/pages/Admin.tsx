@@ -4,6 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { LEADERS, getLeader } from '../data/leaders';
 import { exportToExcel, exportToPowerPoint } from '../utils/exports';
 import { PRINCIPLES, getPrinciple } from '../data/principles';
+import { buildCheckInMailto } from '../utils/emailSummary';
 import type { CheckIn, StartingPoint } from '../types';
 
 // ── Export button with loading state ─────────────────────────────────────────
@@ -306,6 +307,24 @@ function CheckInCard({ ci, leaderRatings }: { ci: CheckIn; leaderRatings: number
             )}
           </FormField>
         </div>
+
+        {/* Send summary by email */}
+        {ci.email && (
+          <div className="pt-2 border-t border-gray-100 flex justify-end">
+            <a
+              href={buildCheckInMailto(ci, leader?.name ?? '')}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold
+                         transition-all hover:opacity-90 active:scale-95"
+              style={{ backgroundColor: IBL_CYAN, color: IBL_NAVY }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Send Summary by Email
+            </a>
+          </div>
+        )}
 
       </div>
     </div>

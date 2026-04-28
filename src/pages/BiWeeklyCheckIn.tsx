@@ -3,6 +3,8 @@ import { useStore } from '../context/StoreContext';
 import { getLatestSP } from '../context/StoreContext';
 import { LEADERS, getLeader } from '../data/leaders';
 import { PRINCIPLES, getPrinciple } from '../data/principles';
+import { buildBiWeeklyMailto } from '../utils/emailSummary';
+import { getLeaderEmail } from '../data/users';
 import type { BiWeeklyCheckIn } from '../types';
 
 const IBL_NAVY = '#002060';
@@ -165,7 +167,7 @@ function LeaderCard({
 
 // ── History card ──────────────────────────────────────────────────────────────
 
-function HistoryCard({ bw }: { bw: BiWeeklyCheckIn }) {
+function HistoryCard({ bw, leaderEmail }: { bw: BiWeeklyCheckIn; leaderEmail: string }) {
   const [open, setOpen] = useState(false);
   const leader    = getLeader(bw.leaderId);
   const principle = getPrinciple(bw.principleFocus);
@@ -295,6 +297,24 @@ function HistoryCard({ bw }: { bw: BiWeeklyCheckIn }) {
             <p className="text-xs text-gray-400">
               Next check-in: <span className="font-semibold text-gray-700">{formatDateLong(bw.nextCheckInDate)}</span>
             </p>
+          )}
+
+          {/* Send summary by email */}
+          {leaderEmail && (
+            <div className="pt-2 border-t border-gray-100 flex justify-end">
+              <a
+                href={buildBiWeeklyMailto(bw, leader?.name ?? '', leaderEmail)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold
+                           transition-all hover:opacity-90 active:scale-95"
+                style={{ backgroundColor: IBL_CYAN, color: IBL_NAVY }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Send Summary by Email
+              </a>
+            </div>
           )}
         </div>
       )}
@@ -597,7 +617,11 @@ export default function BiWeeklyCheckInPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map(bw => <HistoryCard key={bw.id} bw={bw} />)}
+            {filtered.map(bw => {
+              const sp    = data.startingPoints.find(s => s.leaderId === bw.leaderId);
+              const email = getLeaderEmail(bw.leaderId, sp?.email);
+              return <HistoryCard key={bw.id} bw={bw} leaderEmail={email} />;
+            })}
           </div>
         )}
       </div>
