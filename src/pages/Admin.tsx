@@ -486,7 +486,7 @@ function LeaderRow({
         ) : <span className="text-gray-200 text-sm">—</span>}
       </div>
 
-      {latestCI?.email && latestCI?.focusForNext30Days && (
+      {latestCI?.email && (
         <button
           type="button"
           title={`Send 30-day summary to ${leader.name}`}

@@ -5,6 +5,29 @@ import { getLeader } from '../data/leaders';
 import { PRINCIPLES } from '../data/principles';
 import type { CheckIn } from '../types';
 
+function sendCheckInSummaryEmail(ci: CheckIn, leaderName: string) {
+  const principle = PRINCIPLES.find(p => p.id === ci.selectedPrinciple);
+  const principleName = principle ? `P${principle.number} — ${principle.title}` : ci.selectedPrinciple;
+  const nextDate = ci.nextCheckInDate
+    ? new Date(ci.nextCheckInDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '—';
+  const subject = encodeURIComponent(`Your 30-Day Check-In Summary — ${ci.month}`);
+  const body = encodeURIComponent(
+    `Dear ${leaderName},\n\n` +
+    `Thank you for completing your 30-day check-in for ${ci.month}.\n\n` +
+    `Here is a summary of your session:\n\n` +
+    `──────────────────────────\n` +
+    `Self-rating: ${ci.selfRating}/5\n` +
+    `Principle in focus: ${principleName}\n` +
+    (ci.focusForNext30Days ? `Focus for next 30 days:\n${ci.focusForNext30Days}\n` : '') +
+    `──────────────────────────\n\n` +
+    `Next check-in: ${nextDate}\n\n` +
+    `Keep up the great work!\n\n` +
+    `Best regards,\nIBL Energy — Pioneer Tracker`
+  );
+  window.open(`mailto:${ci.email}?subject=${subject}&body=${body}`, '_blank');
+}
+
 // IBL Energy brand colors
 const IBL_NAVY = '#002060';
 const IBL_CYAN  = '#00D0DA';
@@ -133,6 +156,7 @@ export default function CheckInForm() {
   const leader = getLeader(leaderId ?? '');
   const sp = data.startingPoints.find(s => s.leaderId === leaderId);
   const [form, setForm] = useState(() => buildDefault(sp?.email ?? '', sp?.team ?? ''));
+  const [savedCI, setSavedCI] = useState<CheckIn | null>(null);
 
   if (!leader) {
     return <p className="text-gray-500">Leader not found.</p>;
@@ -153,6 +177,44 @@ export default function CheckInForm() {
     );
   }
 
+  if (savedCI) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center text-white text-2xl mx-auto mb-4"
+            style={{ backgroundColor: IBL_CYAN }}
+          >
+            ✓
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Check-In Saved!</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            {leader.name}'s 30-day check-in for <strong>{savedCI.month}</strong> has been recorded.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            {savedCI.email && (
+              <button
+                type="button"
+                onClick={() => sendCheckInSummaryEmail(savedCI, leader.name)}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90"
+                style={{ backgroundColor: IBL_NAVY, color: 'white' }}
+              >
+                ✉ Send Summary Email
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate(`/leaders/${leader.id}`)}
+              className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              Back to Leader
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function set<K extends keyof typeof form>(key: K, value: typeof form[K]) {
     setForm(prev => ({ ...prev, [key]: value }));
   }
@@ -166,7 +228,7 @@ export default function CheckInForm() {
       submittedAt: new Date().toISOString(),
     };
     addCheckIn(ci);
-    navigate(`/leaders/${leader!.id}`);
+    setSavedCI(ci);
   }
 
   return (
