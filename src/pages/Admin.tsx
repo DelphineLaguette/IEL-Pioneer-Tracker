@@ -485,6 +485,30 @@ function LeaderRow({
                 style={{ backgroundColor: '#fff0f7', color: IBL_PINK }}>⚠ Support</span>
         ) : <span className="text-gray-200 text-sm">—</span>}
       </div>
+
+      {latestCI?.email && latestCI?.focusForNext30Days && (
+        <button
+          type="button"
+          title={`Send 30-day summary to ${leader.name}`}
+          onClick={() => openCheckInSummaryEmail({
+            toEmail: latestCI.email,
+            leaderName: leader.name,
+            month: latestCI.month,
+            focus: latestCI.focusForNext30Days,
+            principleName: (() => {
+              const p = getPrinciple(latestCI.selectedPrinciple);
+              return p ? `P${p.number} — ${p.title}` : latestCI.selectedPrinciple;
+            })(),
+            nextCheckInDate: latestCI.nextCheckInDate ?? '',
+            selfRating: latestCI.selfRating,
+          })}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                     transition-all hover:opacity-90 flex-shrink-0"
+          style={{ backgroundColor: IBL_NAVY, color: 'white' }}
+        >
+          ✉ Send Summary
+        </button>
+      )}
     </div>
   );
 }
