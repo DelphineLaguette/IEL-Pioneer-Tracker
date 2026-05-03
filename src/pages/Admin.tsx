@@ -209,6 +209,28 @@ function CheckInCard({ ci, leaderRatings }: { ci: CheckIn; leaderRatings: number
               ⚠ Support needed
             </span>
           )}
+          {ci.email && ci.focusForNext30Days && (
+            <button
+              type="button"
+              title={`Send check-in summary to ${leader?.name}`}
+              onClick={() => openCheckInSummaryEmail({
+                toEmail: ci.email,
+                leaderName: leader?.name ?? '',
+                month: ci.month,
+                focus: ci.focusForNext30Days,
+                principleName: principle
+                  ? `P${principle.number} — ${principle.title}`
+                  : ci.selectedPrinciple,
+                nextCheckInDate: ci.nextCheckInDate ?? '',
+                selfRating: ci.selfRating,
+              })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                         transition-all hover:opacity-90"
+              style={{ backgroundColor: IBL_NAVY, color: 'white' }}
+            >
+              ✉ Send Summary XTEST123
+            </button>
+          )}
         </div>
       </div>
 
@@ -467,7 +489,46 @@ function LeaderRow({
   );
 }
 
-// ── Email helper ──────────────────────────────────────────────────────────────
+// ── Email helpers ─────────────────────────────────────────────────────────────
+
+function openCheckInSummaryEmail({
+  toEmail,
+  leaderName,
+  month,
+  focus,
+  principleName,
+  nextCheckInDate,
+  selfRating,
+}: {
+  toEmail: string;
+  leaderName: string;
+  month: string;
+  focus: string;
+  principleName: string;
+  nextCheckInDate: string;
+  selfRating: number;
+}) {
+  const nextDate = nextCheckInDate
+    ? new Date(nextCheckInDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '—';
+
+  const subject = encodeURIComponent(`Your 30-Day Check-In Summary — ${month}`);
+  const body = encodeURIComponent(
+    `Dear ${leaderName},\n\n` +
+    `Thank you for completing your 30-day check-in for ${month}.\n\n` +
+    `Here is a summary of your session:\n\n` +
+    `──────────────────────────\n` +
+    `Self-rating: ${selfRating}/5\n` +
+    `Principle in focus: ${principleName}\n` +
+    `Focus for next 30 days:\n${focus}\n` +
+    `──────────────────────────\n\n` +
+    `Next check-in: ${nextDate}\n\n` +
+    `Keep up the great work!\n\n` +
+    `Best regards,\nIBL Energy — Pioneer Tracker`
+  );
+
+  window.open(`mailto:${toEmail}?subject=${subject}&body=${body}`, '_blank');
+}
 
 function openFocusEmail({
   toEmail,
