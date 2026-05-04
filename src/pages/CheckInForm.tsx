@@ -192,16 +192,14 @@ export default function CheckInForm() {
             {leader.name}'s 30-day check-in for <strong>{savedCI.month}</strong> has been recorded.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            {savedCI.email && (
-              <button
-                type="button"
-                onClick={() => sendCheckInSummaryEmail(savedCI, leader.name)}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90"
-                style={{ backgroundColor: IBL_NAVY, color: 'white' }}
-              >
-                ✉ Send Summary Email
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => sendCheckInSummaryEmail(savedCI, leader.name)}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90"
+              style={{ backgroundColor: IBL_NAVY, color: 'white' }}
+            >
+              ✉ Send Summary Email
+            </button>
             <button
               type="button"
               onClick={() => navigate(`/leaders/${leader.id}`)}
