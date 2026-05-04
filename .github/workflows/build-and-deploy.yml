@@ -3,6 +3,7 @@ name: Build and update docs
 on:
   push:
     branches:
+      - main
       - claude/create-iel-tracker-repo-la3vx
 
 permissions:
