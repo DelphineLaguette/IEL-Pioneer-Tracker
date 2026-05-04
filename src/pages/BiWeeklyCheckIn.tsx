@@ -339,6 +339,33 @@ function HistoryCard({ bw }: { bw: BiWeeklyCheckIn }) {
   );
 }
 
+// ── Email helper ──────────────────────────────────────────────────────────────
+
+function sendBiWeeklySummaryEmail(bw: BiWeeklyCheckIn, leaderName: string, leaderEmail: string) {
+  const principle = getPrinciple(bw.principleFocus);
+  const principleName = principle ? `P${principle.number} — ${principle.title}` : bw.principleFocus || '—';
+  const nextDate = bw.nextCheckInDate
+    ? new Date(bw.nextCheckInDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '—';
+  const subject = encodeURIComponent(`Your Bi-Weekly Check-In Summary — Week ${bw.week}`);
+  const body = encodeURIComponent(
+    `Dear ${leaderName},\n\n` +
+    `Thank you for your bi-weekly check-in (Week ${bw.week}).\n\n` +
+    `Here is a summary:\n\n` +
+    `──────────────────────────\n` +
+    `Principle in focus: ${principleName}\n` +
+    `Status: ${bw.status}\n` +
+    `Self-rating: ${bw.selfRating}/5\n` +
+    `Confidence level: ${bw.confidenceLevel}/5\n` +
+    (bw.focusNextMonth ? `Focus for next 30 days:\n${bw.focusNextMonth}\n` : '') +
+    `──────────────────────────\n\n` +
+    `Next check-in: ${nextDate}\n\n` +
+    `Keep up the great work!\n\n` +
+    `Best regards,\nIBL Energy — Pioneer Tracker`
+  );
+  window.open(`mailto:${leaderEmail}?subject=${subject}&body=${body}`, '_blank');
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 function buildDefault(leaderId: string): Omit<BiWeeklyCheckIn, 'id' | 'createdAt'> {
@@ -376,6 +403,7 @@ export default function BiWeeklyCheckInPage() {
   const [showForm, setShowForm]   = useState(false);
   const [filterLeader, setFilter] = useState('');
   const [form, setForm]           = useState(() => buildDefault(''));
+  const [savedBW, setSavedBW]     = useState<BiWeeklyCheckIn | null>(null);
 
   function set<K extends keyof typeof form>(key: K, value: typeof form[K]) {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -384,6 +412,7 @@ export default function BiWeeklyCheckInPage() {
   function openForm(leaderId: string) {
     setForm(buildDefault(leaderId));
     setShowForm(true);
+    setSavedBW(null);
     setTimeout(() => document.getElementById('bw-form')?.scrollIntoView({ behavior: 'smooth' }), 50);
   }
 
@@ -395,6 +424,7 @@ export default function BiWeeklyCheckInPage() {
       createdAt: new Date().toISOString(),
     };
     addBiWeeklyCheckIn(bw);
+    setSavedBW(bw);
     setShowForm(false);
     setForm(buildDefault(''));
   }
@@ -437,6 +467,34 @@ export default function BiWeeklyCheckInPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Save confirmation banner ── */}
+      {savedBW && (() => {
+        const leader = getLeader(savedBW.leaderId);
+        const sp = data.startingPoints.find(s => s.leaderId === savedBW.leaderId);
+        return (
+          <div className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg flex-shrink-0"
+                 style={{ backgroundColor: IBL_CYAN }}>✓</div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-gray-900 text-sm">Check-In Saved!</p>
+              <p className="text-xs text-gray-500">{leader?.name}'s bi-weekly check-in has been recorded.</p>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => sendBiWeeklySummaryEmail(savedBW, leader?.name ?? '', sp?.email ?? '')}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:opacity-90"
+                style={{ backgroundColor: IBL_NAVY, color: 'white' }}
+              >
+                ✉ Send Summary
+              </button>
+              <button type="button" onClick={() => setSavedBW(null)}
+                      className="text-gray-400 hover:text-gray-600 text-xl px-2">✕</button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Leader overview cards ── */}
       <div>
