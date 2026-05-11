@@ -52,6 +52,7 @@ export interface CheckIn {
   id: string;
   leaderId: string;
   submittedAt: string;
+  type?: 'bi-weekly' | '30-day';
 
   // Leader info
   email: string;

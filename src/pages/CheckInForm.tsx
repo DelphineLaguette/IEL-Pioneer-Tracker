@@ -122,6 +122,7 @@ function SectionHeader({ number, title }: { number: number; title: string }) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 function buildDefault(email: string, team: string): Omit<CheckIn, 'id' | 'leaderId' | 'submittedAt'> {
+  // type is set to '30-day' at submit time
   const now = new Date();
   const month = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   return {
@@ -224,6 +225,7 @@ export default function CheckInForm() {
       id: crypto.randomUUID(),
       leaderId: leader!.id,
       submittedAt: new Date().toISOString(),
+      type: '30-day',
     };
     addCheckIn(ci);
     setSavedCI(ci);

@@ -5,7 +5,9 @@ import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import LeaderJourney from './pages/LeaderJourney';
 import StartingPointForm from './pages/StartingPointForm';
+import CheckInTypeSelector from './pages/CheckInTypeSelector';
 import CheckInForm from './pages/CheckInForm';
+import BiWeeklyLeaderForm from './pages/BiWeeklyLeaderForm';
 import Admin from './pages/Admin';
 import AdminLogin, { isAdminAuthenticated } from './pages/AdminLogin';
 import BiWeeklyCheckInPage from './pages/BiWeeklyCheckIn';
@@ -26,7 +28,9 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/leaders/:leaderId" element={<LeaderJourney />} />
             <Route path="/leaders/:leaderId/starting-point" element={<StartingPointForm />} />
-            <Route path="/leaders/:leaderId/checkin/new" element={<CheckInForm />} />
+            <Route path="/leaders/:leaderId/checkin/new" element={<CheckInTypeSelector />} />
+            <Route path="/leaders/:leaderId/checkin/30-day" element={<CheckInForm />} />
+            <Route path="/leaders/:leaderId/checkin/bi-weekly" element={<BiWeeklyLeaderForm />} />
             <Route path="/admin" element={<AdminGate />} />
             <Route path="/bi-weekly" element={<BiWeeklyCheckInPage />} />
           </Routes>

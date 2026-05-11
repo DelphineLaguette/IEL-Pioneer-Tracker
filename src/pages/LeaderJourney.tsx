@@ -223,6 +223,33 @@ function ReflectionHistory({ versions }: { versions: StartingPoint[] }) {
   );
 }
 
+// ── Check-in card helpers ─────────────────────────────────────────────────────
+
+function TextField({ label, value }: { label: string; value?: string }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+      {value ? (
+        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">{value}</p>
+      ) : (
+        <p className="text-sm text-gray-300 italic">—</p>
+      )}
+    </div>
+  );
+}
+
+function FormDivider({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <div className="h-px flex-1 bg-gray-100" />
+      <span className="text-xs font-bold uppercase tracking-widest px-1" style={{ color: IBL_NAVY }}>
+        {title}
+      </span>
+      <div className="h-px flex-1 bg-gray-100" />
+    </div>
+  );
+}
+
 // ── Check-in card ────────────────────────────────────────────────────────────
 
 function CheckInCard({ ci, index }: { ci: CheckIn; index: number }) {
@@ -233,10 +260,13 @@ function CheckInCard({ ci, index }: { ci: CheckIn; index: number }) {
     declined: { label: '↓ Need to improve',  bg: '#fee2e2', fg: '#b91c1c' },
   };
   const progress = progressMap[ci.progressVersusLastMonth];
+  const isBiWeekly = ci.type === 'bi-weekly';
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden
                     hover:shadow-md transition-all duration-200">
+
+      {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100"
            style={{ backgroundColor: '#f8fafc' }}>
         <div className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
@@ -246,38 +276,153 @@ function CheckInCard({ ci, index }: { ci: CheckIn; index: number }) {
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{ci.month}</p>
           <p className="font-semibold text-gray-900 text-sm truncate">
-            {principle ? `P${principle.number} — ${principle.shortTitle}` : ci.selectedPrinciple}
+            {isBiWeekly
+              ? 'Bi-Weekly Check-In'
+              : (principle ? `P${principle.number} — ${principle.shortTitle}` : ci.selectedPrinciple)}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <RatingBadge rating={ci.selfRating} />
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                style={{ backgroundColor: progress.bg, color: progress.fg }}>
-            {progress.label}
+        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                style={isBiWeekly
+                  ? { backgroundColor: '#E6FAFB', color: IBL_CYAN }
+                  : { backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+            {isBiWeekly ? 'Bi-Weekly' : '30-Day'}
           </span>
+          {!isBiWeekly && <RatingBadge rating={ci.selfRating} />}
+          {!isBiWeekly && (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: progress.bg, color: progress.fg }}>
+              {progress.label}
+            </span>
+          )}
         </div>
       </div>
 
-      <div className="p-5 space-y-3">
-        {ci.whatDidWell && (
-          <div className="p-3 rounded-xl" style={{ backgroundColor: '#f0fdf4' }}>
-            <p className="text-xs font-semibold mb-0.5" style={{ color: '#15803d' }}>What went well</p>
-            <p className="text-sm text-gray-700">{ci.whatDidWell}</p>
-          </div>
+      {/* Body */}
+      <div className="px-5 py-5 space-y-4">
+
+        <FormDivider title="About" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <TextField label="Email" value={ci.email} />
+          <TextField label="Team" value={ci.team} />
+          <TextField label="Date" value={ci.month} />
+        </div>
+
+        {isBiWeekly ? (
+          <>
+            <FormDivider title="Principle Focus" />
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                  Current principle focus
+                </p>
+                {principle ? (
+                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full"
+                        style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+                    P{principle.number} — {principle.title}
+                  </span>
+                ) : <p className="text-sm text-gray-300 italic">—</p>}
+              </div>
+              <TextField label="How is your Principle Focus going?" value={ci.whyThisPrinciple} />
+              {ci.supportNeeded && (
+                <>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                      Support needed?
+                    </p>
+                    <span className="text-sm font-semibold" style={{ color: IBL_PINK }}>Yes</span>
+                  </div>
+                  <TextField label="Type of support" value={ci.typeOfSupportNeeded} />
+                </>
+              )}
+            </div>
+
+            <FormDivider title="Bi-Weekly Reflection" />
+            <div className="space-y-3">
+              <TextField label="What I did well these last 2 weeks" value={ci.whatDidWell} />
+              {ci.focusForNext30Days && (
+                <div className="p-3 rounded-xl border-l-4"
+                     style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
+                  <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
+                    Focus for next 2 weeks
+                  </p>
+                  <p className="text-sm text-gray-800 leading-relaxed">{ci.focusForNext30Days}</p>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <FormDivider title="This Month's Focus" />
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                  Selected principle
+                </p>
+                {principle ? (
+                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full"
+                        style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+                    P{principle.number} — {principle.title}
+                  </span>
+                ) : <p className="text-sm text-gray-300 italic">—</p>}
+              </div>
+              <TextField label="Why this principle this month?" value={ci.whyThisPrinciple} />
+              <TextField label="3 behaviours I will practice" value={ci.threeBehaviours} />
+              <TextField label="Success measure" value={ci.successMeasure} />
+              <TextField label="Accountability partner" value={ci.accountabilityPartner} />
+            </div>
+
+            <FormDivider title="Reflection on This Month" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <TextField label="What I did well this month" value={ci.whatDidWell} />
+              <TextField label="Where I fell short" value={ci.whereFellShort} />
+              <TextField label="Concrete example" value={ci.concreteExample} />
+              <TextField label="Main obstacle" value={ci.mainObstacle} />
+            </div>
+
+            <FormDivider title="Feedback & Progress" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <TextField label="Feedback from team" value={ci.feedbackFromTeam} />
+              <TextField label="Feedback from manager" value={ci.feedbackFromManager} />
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                  Support needed?
+                </p>
+                <span className="text-sm font-semibold"
+                      style={{ color: ci.supportNeeded ? IBL_PINK : '#15803d' }}>
+                  {ci.supportNeeded ? 'Yes' : 'No'}
+                </span>
+              </div>
+              {ci.supportNeeded && <TextField label="Type of support" value={ci.typeOfSupportNeeded} />}
+            </div>
+
+            <FormDivider title="Looking Forward" />
+            <div className="space-y-3">
+              {ci.focusForNext30Days ? (
+                <div className="p-3 rounded-xl border-l-4"
+                     style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
+                  <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
+                    Focus for next 30 days
+                  </p>
+                  <p className="text-sm text-gray-800 leading-relaxed">{ci.focusForNext30Days}</p>
+                </div>
+              ) : <TextField label="Focus for next 30 days" value="" />}
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                  Next check-in date
+                </p>
+                {ci.nextCheckInDate ? (
+                  <p className="text-sm font-semibold text-gray-800">
+                    {new Date(ci.nextCheckInDate).toLocaleDateString('en-GB', {
+                      day: 'numeric', month: 'long', year: 'numeric',
+                    })}
+                  </p>
+                ) : <p className="text-sm text-gray-300 italic">—</p>}
+              </div>
+            </div>
+          </>
         )}
-        {ci.focusForNext30Days && (
-          <div className="p-3 rounded-xl" style={{ backgroundColor: '#eff6ff' }}>
-            <p className="text-xs font-semibold mb-0.5" style={{ color: '#1d4ed8' }}>Next 30-day focus</p>
-            <p className="text-sm text-gray-700">{ci.focusForNext30Days}</p>
-          </div>
-        )}
-        {ci.supportNeeded && ci.typeOfSupportNeeded && (
-          <div className="p-3 rounded-xl border"
-               style={{ backgroundColor: '#fff0f7', borderColor: IBL_PINK }}>
-            <p className="text-xs font-semibold mb-0.5" style={{ color: IBL_PINK }}>Support requested</p>
-            <p className="text-sm text-gray-700">{ci.typeOfSupportNeeded}</p>
-          </div>
-        )}
+
         <p className="text-xs text-gray-400 pt-1">Submitted {formatDate(ci.submittedAt)}</p>
       </div>
     </div>
@@ -520,7 +665,7 @@ export default function LeaderJourney() {
       {/* ── Check-ins ── */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-lg" style={{ color: IBL_NAVY }}>30-Day Check-Ins</h2>
+          <h2 className="font-semibold text-lg" style={{ color: IBL_NAVY }}>Check-Ins</h2>
           {sp && (
             <Link
               to={`/leaders/${leader.id}/checkin/new`}

@@ -148,21 +148,109 @@ function FormDivider({ title }: { title: string }) {
   );
 }
 
+// ── Edit-mode input helpers ───────────────────────────────────────────────────
+
+function EditInput({ label, value, onChange }: {
+  label: string; value: string; onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none
+                   focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent"
+      />
+    </div>
+  );
+}
+
+function EditTextArea({ label, value, onChange, rows = 3 }: {
+  label: string; value: string; onChange: (v: string) => void; rows?: number;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        rows={rows}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none
+                   focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent resize-none"
+      />
+    </div>
+  );
+}
+
 // ── Full check-in card (always visible, form-style) ──────────────────────────
 
-function CheckInCard({ ci, leaderRatings }: { ci: CheckIn; leaderRatings: number[] }) {
+function CheckInCard({
+  ci,
+  leaderRatings,
+  onSave,
+  onDelete,
+}: {
+  ci: CheckIn;
+  leaderRatings: number[];
+  onSave: (updated: CheckIn) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [form, setForm] = useState<CheckIn>(ci);
+
   const leader    = getLeader(ci.leaderId);
   const principle = getPrinciple(ci.selectedPrinciple);
   const progress  = PROGRESS_CONFIG[ci.progressVersusLastMonth];
 
-  // Delta vs previous check-in for this leader
-  const ciIdx   = leaderRatings.indexOf(ci.selfRating); // approximate; use position in sorted list
-  const myPos   = leaderRatings.length - 1; // current card is the most recent shown
+  function set<K extends keyof CheckIn>(key: K, value: CheckIn[K]) {
+    setForm(prev => ({ ...prev, [key]: value }));
+  }
+
+  function handleSave() {
+    onSave(form);
+    setEditing(false);
+  }
+
+  function handleCancelEdit() {
+    setForm(ci);
+    setEditing(false);
+  }
+
   const prevRating = leaderRatings[leaderRatings.length - 2];
-  const delta   = leaderRatings.length > 1 ? ci.selfRating - prevRating : null;
+  const delta = leaderRatings.length > 1 ? ci.selfRating - prevRating : null;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+      {/* ── Delete confirmation banner ── */}
+      {confirmDelete && (
+        <div className="flex items-center gap-4 px-6 py-4 border-b border-pink-200"
+             style={{ backgroundColor: '#fff0f7' }}>
+          <p className="flex-1 text-sm font-semibold text-gray-800">
+            Delete this check-in?{' '}
+            <span className="font-normal text-gray-500">This cannot be undone.</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => onDelete(ci.id)}
+            className="px-4 py-1.5 rounded-lg text-sm font-bold text-white hover:opacity-90 transition-all"
+            style={{ backgroundColor: IBL_PINK }}
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(false)}
+            className="px-4 py-1.5 rounded-lg text-sm font-semibold text-gray-600 bg-white
+                       border border-gray-200 hover:bg-gray-50 transition-all"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* ── Header strip ── */}
       <div className="px-6 py-4 flex items-center gap-3 border-b border-gray-100"
@@ -199,6 +287,12 @@ function CheckInCard({ ci, leaderRatings }: { ci: CheckIn; leaderRatings: number
         </div>
 
         <div className="flex flex-col gap-1.5 flex-shrink-0 items-end">
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                style={ci.type === 'bi-weekly'
+                  ? { backgroundColor: '#E6FAFB', color: IBL_CYAN }
+                  : { backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+            {ci.type === 'bi-weekly' ? 'Bi-Weekly' : '30-Day'}
+          </span>
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
                 style={{ backgroundColor: progress.bg, color: progress.fg }}>
             {progress.label}
@@ -232,110 +326,273 @@ function CheckInCard({ ci, leaderRatings }: { ci: CheckIn; leaderRatings: number
             </button>
           )}
         </div>
+
+        {/* ── Action buttons ── */}
+        <div className="flex items-center gap-1 flex-shrink-0 ml-1">
+          {!editing && (
+            <button
+              type="button"
+              title="Edit"
+              onClick={() => { setEditing(true); setConfirmDelete(false); }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-base
+                         hover:bg-blue-50 transition-colors"
+            >
+              ✏️
+            </button>
+          )}
+          <button
+            type="button"
+            title="Delete"
+            onClick={() => { setConfirmDelete(v => !v); setEditing(false); }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-base
+                       hover:bg-pink-50 transition-colors"
+          >
+            🗑
+          </button>
+        </div>
       </div>
 
-      {/* ── Form body ── */}
-      <div className="px-6 py-5 space-y-5">
+      {/* ── Edit form ── */}
+      {editing && (
+        <div className="px-6 py-5 space-y-5 bg-slate-50 border-b border-gray-100">
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: IBL_NAVY }}>
+            Editing Check-In
+          </p>
 
-        {/* Section 1 – About This Month */}
-        <FormDivider title="About This Month" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <TextField label="Leader name" value={leader?.name} />
-          <TextField label="Email"       value={ci.email || '—'} />
-          <TextField label="Team"        value={ci.team  || '—'} />
-          <TextField label="Month"       value={ci.month} />
-        </div>
+          <FormDivider title="About This Month" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <EditInput label="Email" value={form.email} onChange={v => set('email', v)} />
+            <EditInput label="Team" value={form.team} onChange={v => set('team', v)} />
+            <EditInput label="Month" value={form.month} onChange={v => set('month', v)} />
+          </div>
 
-        {/* Section 2 – This Month's Focus */}
-        <FormDivider title="This Month's Focus" />
-        <div className="space-y-4">
-          <FormField label="Selected leadership principle">
-            {principle ? (
-              <span className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1
-                               rounded-full" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-                P{principle.number} — {principle.title}
-              </span>
-            ) : (
-              <p className="text-sm text-gray-300 italic">—</p>
-            )}
-          </FormField>
-          <TextField label="Why this principle this month?"  value={ci.whyThisPrinciple} />
-          <TextField label="3 behaviours I will practice"    value={ci.threeBehaviours} />
-          <TextField label="Success measure"                 value={ci.successMeasure} />
-          <TextField label="Accountability partner"          value={ci.accountabilityPartner} />
-        </div>
-
-        {/* Section 3 – Reflection */}
-        <FormDivider title="Reflection on This Month" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <TextField label="What I did well this month" value={ci.whatDidWell} />
-          <TextField label="Where I fell short"         value={ci.whereFellShort} />
-          <TextField label="Concrete example"           value={ci.concreteExample} />
-          <TextField label="Main obstacle"              value={ci.mainObstacle} />
-        </div>
-
-        {/* Section 4 – Feedback & Progress */}
-        <FormDivider title="Feedback & Progress" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <TextField label="Feedback from team"    value={ci.feedbackFromTeam} />
-          <TextField label="Feedback from manager" value={ci.feedbackFromManager} />
-
-          <FormField label="Self-rating this month">
-            <RatingBadge rating={ci.selfRating} />
-          </FormField>
-
-          <FormField label="Progress versus last month">
-            <span className="inline-flex text-sm font-semibold px-3 py-1 rounded-full"
-                  style={{ backgroundColor: progress.bg, color: progress.fg }}>
-              {progress.label}
-            </span>
-          </FormField>
-
-          <FormField label="Support needed?">
-            <span className="text-sm font-semibold"
-                  style={{ color: ci.supportNeeded ? IBL_PINK : '#15803d' }}>
-              {ci.supportNeeded ? 'Yes' : 'No'}
-            </span>
-          </FormField>
-
-          {ci.supportNeeded && (
-            <div className="p-3 rounded-xl border sm:col-span-2"
-                 style={{ backgroundColor: '#fff8fb', borderColor: `${IBL_PINK}40` }}>
-              <p className="text-xs font-semibold uppercase tracking-wide mb-1"
-                 style={{ color: IBL_PINK }}>Type of support needed</p>
-              <p className="text-sm text-gray-800 leading-relaxed">
-                {ci.typeOfSupportNeeded || '—'}
+          <FormDivider title="This Month's Focus" />
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                Selected principle
               </p>
+              <select
+                value={form.selectedPrinciple}
+                onChange={e => set('selectedPrinciple', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                           focus:outline-none focus:ring-2 focus:ring-[#00D0DA] bg-white"
+              >
+                <option value="">Select a principle...</option>
+                {PRINCIPLES.map(p => (
+                  <option key={p.id} value={p.id}>P{p.number} — {p.title}</option>
+                ))}
+              </select>
             </div>
-          )}
-        </div>
+            <EditTextArea label="Why this principle this month?" value={form.whyThisPrinciple} onChange={v => set('whyThisPrinciple', v)} />
+            <EditTextArea label="3 behaviours I will practice" value={form.threeBehaviours} onChange={v => set('threeBehaviours', v)} rows={4} />
+            <EditTextArea label="Success measure" value={form.successMeasure} onChange={v => set('successMeasure', v)} rows={2} />
+            <EditInput label="Accountability partner" value={form.accountabilityPartner} onChange={v => set('accountabilityPartner', v)} />
+          </div>
 
-        {/* Section 5 – Looking Forward */}
-        <FormDivider title="Looking Forward" />
-        <div className="space-y-3">
-          {ci.focusForNext30Days ? (
-            <div className="p-4 rounded-xl border-l-4"
-                 style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
-              <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
-                Focus for next 30 days
+          <FormDivider title="Reflection on This Month" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <EditTextArea label="What I did well this month" value={form.whatDidWell} onChange={v => set('whatDidWell', v)} />
+            <EditTextArea label="Where I fell short" value={form.whereFellShort} onChange={v => set('whereFellShort', v)} />
+            <EditTextArea label="Concrete example" value={form.concreteExample} onChange={v => set('concreteExample', v)} />
+            <EditTextArea label="Main obstacle" value={form.mainObstacle} onChange={v => set('mainObstacle', v)} rows={2} />
+          </div>
+
+          <FormDivider title="Feedback & Progress" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <EditTextArea label="Feedback from team" value={form.feedbackFromTeam} onChange={v => set('feedbackFromTeam', v)} />
+            <EditTextArea label="Feedback from manager" value={form.feedbackFromManager} onChange={v => set('feedbackFromManager', v)} />
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                Self-rating (1–5)
               </p>
-              <p className="text-sm text-gray-800 leading-relaxed">{ci.focusForNext30Days}</p>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button key={n} type="button"
+                          onClick={() => set('selfRating', n)}
+                          className="w-9 h-9 rounded-full font-bold text-sm transition-all"
+                          style={form.selfRating === n
+                            ? { backgroundColor: IBL_NAVY, color: '#fff' }
+                            : { backgroundColor: '#f3f4f6', color: '#4b5563' }}>
+                    {n}
+                  </button>
+                ))}
+              </div>
             </div>
-          ) : (
-            <TextField label="Focus for next 30 days" value="" />
-          )}
-          <FormField label="Next check-in date">
-            {ci.nextCheckInDate ? (
-              <span className="text-sm font-semibold text-gray-800">
-                {new Date(ci.nextCheckInDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </span>
-            ) : (
-              <p className="text-sm text-gray-300 italic">—</p>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Progress</p>
+              <div className="flex gap-2 flex-wrap">
+                {(['improved', 'same', 'declined'] as const).map(v => (
+                  <button key={v} type="button"
+                          onClick={() => set('progressVersusLastMonth', v)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
+                          style={form.progressVersusLastMonth === v
+                            ? { backgroundColor: PROGRESS_CONFIG[v].bg, color: PROGRESS_CONFIG[v].fg, borderColor: 'transparent' }
+                            : { backgroundColor: '#f9fafb', color: '#6b7280', borderColor: '#e5e7eb' }}>
+                    {PROGRESS_CONFIG[v].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                Support needed?
+              </p>
+              <div className="flex gap-2">
+                {([true, false] as const).map(val => (
+                  <button key={String(val)} type="button"
+                          onClick={() => set('supportNeeded', val)}
+                          className="px-4 py-1.5 rounded-lg text-sm font-medium border transition-all"
+                          style={form.supportNeeded === val
+                            ? { backgroundColor: IBL_NAVY, color: '#fff', borderColor: 'transparent' }
+                            : { backgroundColor: '#f9fafb', color: '#6b7280', borderColor: '#e5e7eb' }}>
+                    {val ? 'Yes' : 'No'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {form.supportNeeded && (
+              <EditTextArea label="Type of support needed" value={form.typeOfSupportNeeded} onChange={v => set('typeOfSupportNeeded', v)} rows={2} />
             )}
-          </FormField>
-        </div>
+          </div>
 
-      </div>
+          <FormDivider title="Looking Forward" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <EditTextArea label="Focus for next 30 days" value={form.focusForNext30Days} onChange={v => set('focusForNext30Days', v)} rows={3} />
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                Next check-in date
+              </p>
+              <input
+                type="date"
+                value={form.nextCheckInDate}
+                onChange={e => set('nextCheckInDate', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                           focus:outline-none focus:ring-2 focus:ring-[#00D0DA]"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
+              style={{ backgroundColor: IBL_NAVY }}
+            >
+              Save Changes
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-white
+                         border border-gray-200 hover:bg-gray-50 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Read-only form body ── */}
+      {!editing && (
+        <div className="px-6 py-5 space-y-5">
+
+          <FormDivider title="About This Month" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <TextField label="Leader name" value={leader?.name} />
+            <TextField label="Email"       value={ci.email || '—'} />
+            <TextField label="Team"        value={ci.team  || '—'} />
+            <TextField label="Month"       value={ci.month} />
+          </div>
+
+          <FormDivider title="This Month's Focus" />
+          <div className="space-y-4">
+            <FormField label="Selected leadership principle">
+              {principle ? (
+                <span className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1
+                                 rounded-full" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+                  P{principle.number} — {principle.title}
+                </span>
+              ) : (
+                <p className="text-sm text-gray-300 italic">—</p>
+              )}
+            </FormField>
+            <TextField label="Why this principle this month?"  value={ci.whyThisPrinciple} />
+            <TextField label="3 behaviours I will practice"    value={ci.threeBehaviours} />
+            <TextField label="Success measure"                 value={ci.successMeasure} />
+            <TextField label="Accountability partner"          value={ci.accountabilityPartner} />
+          </div>
+
+          <FormDivider title="Reflection on This Month" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <TextField label="What I did well this month" value={ci.whatDidWell} />
+            <TextField label="Where I fell short"         value={ci.whereFellShort} />
+            <TextField label="Concrete example"           value={ci.concreteExample} />
+            <TextField label="Main obstacle"              value={ci.mainObstacle} />
+          </div>
+
+          <FormDivider title="Feedback & Progress" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <TextField label="Feedback from team"    value={ci.feedbackFromTeam} />
+            <TextField label="Feedback from manager" value={ci.feedbackFromManager} />
+
+            <FormField label="Self-rating this month">
+              <RatingBadge rating={ci.selfRating} />
+            </FormField>
+
+            <FormField label="Progress versus last month">
+              <span className="inline-flex text-sm font-semibold px-3 py-1 rounded-full"
+                    style={{ backgroundColor: progress.bg, color: progress.fg }}>
+                {progress.label}
+              </span>
+            </FormField>
+
+            <FormField label="Support needed?">
+              <span className="text-sm font-semibold"
+                    style={{ color: ci.supportNeeded ? IBL_PINK : '#15803d' }}>
+                {ci.supportNeeded ? 'Yes' : 'No'}
+              </span>
+            </FormField>
+
+            {ci.supportNeeded && (
+              <div className="p-3 rounded-xl border sm:col-span-2"
+                   style={{ backgroundColor: '#fff8fb', borderColor: `${IBL_PINK}40` }}>
+                <p className="text-xs font-semibold uppercase tracking-wide mb-1"
+                   style={{ color: IBL_PINK }}>Type of support needed</p>
+                <p className="text-sm text-gray-800 leading-relaxed">
+                  {ci.typeOfSupportNeeded || '—'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <FormDivider title="Looking Forward" />
+          <div className="space-y-3">
+            {ci.focusForNext30Days ? (
+              <div className="p-4 rounded-xl border-l-4"
+                   style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
+                <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
+                  Focus for next 30 days
+                </p>
+                <p className="text-sm text-gray-800 leading-relaxed">{ci.focusForNext30Days}</p>
+              </div>
+            ) : (
+              <TextField label="Focus for next 30 days" value="" />
+            )}
+            <FormField label="Next check-in date">
+              {ci.nextCheckInDate ? (
+                <span className="text-sm font-semibold text-gray-800">
+                  {new Date(ci.nextCheckInDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
+              ) : (
+                <p className="text-sm text-gray-300 italic">—</p>
+              )}
+            </FormField>
+          </div>
+
+        </div>
+      )}
     </div>
   );
 }
@@ -878,7 +1135,8 @@ function LeaderBiWeeklyPanel({
 // ── Main Admin page ───────────────────────────────────────────────────────────
 
 export default function Admin() {
-  const { data } = useStore();
+  const { data, updateCheckIn, deleteCheckIn } = useStore();
+  const [filterLeader, setFilterLeader] = useState('');
 
   // ── Overview stats ──────────────────────────────────────────────────────────
   const completedReflections = LEADERS.filter(l =>
@@ -919,6 +1177,22 @@ export default function Admin() {
       principle: b.principleFocus, support: b.typeOfSupportNeeded,
     })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // ── Filtered check-ins ──────────────────────────────────────────────────────
+  const filtered = data.checkIns
+    .filter(ci => !filterLeader || ci.leaderId === filterLeader)
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? filtered : filtered.slice(0, 3);
+
+  const ratingsByLeader: Record<string, number[]> = {};
+  data.checkIns
+    .sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime())
+    .forEach(ci => {
+      if (!ratingsByLeader[ci.leaderId]) ratingsByLeader[ci.leaderId] = [];
+      ratingsByLeader[ci.leaderId].push(ci.selfRating);
+    });
 
   return (
     <div className="space-y-6">
@@ -1121,6 +1395,61 @@ export default function Admin() {
         </div>
       )}
 
+      {/* ── Leadership Check-In Browser ──────────────────────────────────────── */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Leadership Check-Ins</h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {filtered.length} check-in{filtered.length !== 1 ? 's' : ''}
+              {filterLeader ? ` for ${getLeader(filterLeader)?.name}` : ' across all leaders'}
+            </p>
+          </div>
+          <div className="ml-auto">
+            <select
+              value={filterLeader}
+              onChange={e => setFilterLeader(e.target.value)}
+              className="border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white
+                         focus:outline-none focus:ring-2 focus:ring-[#00D0DA]"
+            >
+              <option value="">All leaders</option>
+              {LEADERS.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-16">
+            <p className="text-gray-400 text-sm">
+              {data.checkIns.length === 0
+                ? 'No check-ins have been submitted yet.'
+                : 'No check-ins for this leader yet.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            {visible.map(ci => (
+              <CheckInCard
+                key={ci.id}
+                ci={ci}
+                leaderRatings={ratingsByLeader[ci.leaderId] ?? [ci.selfRating]}
+                onSave={updateCheckIn}
+                onDelete={deleteCheckIn}
+              />
+            ))}
+            {filtered.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setShowAll(v => !v)}
+                className="w-full py-3 rounded-2xl border border-gray-200 text-sm font-semibold
+                           text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                {showAll ? 'Show less' : `Show all ${filtered.length} check-ins`}
+              </button>
+            )}
+          </>
+        )}
+      </div>
 
     </div>
   );
