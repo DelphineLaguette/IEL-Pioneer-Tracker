@@ -95,6 +95,8 @@ interface StoreContextType {
   updateCheckIn: (ci: CheckIn) => void;
   deleteCheckIn: (id: string) => void;
   addBiWeeklyCheckIn: (bw: BiWeeklyCheckIn) => void;
+  updateBiWeeklyCheckIn: (bw: BiWeeklyCheckIn) => void;
+  deleteBiWeeklyCheckIn: (id: string) => void;
 }
 
 const StoreContext = createContext<StoreContextType | null>(null);
@@ -181,8 +183,27 @@ function LocalStoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateBiWeeklyCheckIn = useCallback((bw: BiWeeklyCheckIn) => {
+    setData(prev => {
+      const next: TrackerData = {
+        ...prev,
+        biWeeklyCheckIns: prev.biWeeklyCheckIns.map(b => b.id === bw.id ? bw : b),
+      };
+      localSave(next);
+      return next;
+    });
+  }, []);
+
+  const deleteBiWeeklyCheckIn = useCallback((id: string) => {
+    setData(prev => {
+      const next: TrackerData = { ...prev, biWeeklyCheckIns: prev.biWeeklyCheckIns.filter(b => b.id !== id) };
+      localSave(next);
+      return next;
+    });
+  }, []);
+
   return (
-    <StoreContext.Provider value={{ data, saveStartingPoint, addCheckIn, updateCheckIn, deleteCheckIn, addBiWeeklyCheckIn }}>
+    <StoreContext.Provider value={{ data, saveStartingPoint, addCheckIn, updateCheckIn, deleteCheckIn, addBiWeeklyCheckIn, updateBiWeeklyCheckIn, deleteBiWeeklyCheckIn }}>
       {children}
     </StoreContext.Provider>
   );
@@ -256,8 +277,18 @@ function FirestoreProvider({ children }: { children: ReactNode }) {
     setDoc(doc(db, 'biWeeklyCheckIns', bw.id), bw).catch(console.error);
   }, []);
 
+  const updateBiWeeklyCheckIn = useCallback((bw: BiWeeklyCheckIn) => {
+    setDoc(doc(db, 'biWeeklyCheckIns', bw.id), bw).catch(console.error);
+  }, []);
+
+  const deleteBiWeeklyCheckIn = useCallback((id: string) => {
+    import('firebase/firestore').then(({ deleteDoc }) => {
+      deleteDoc(doc(db, 'biWeeklyCheckIns', id)).catch(console.error);
+    });
+  }, []);
+
   return (
-    <StoreContext.Provider value={{ data, saveStartingPoint, addCheckIn, updateCheckIn, deleteCheckIn, addBiWeeklyCheckIn }}>
+    <StoreContext.Provider value={{ data, saveStartingPoint, addCheckIn, updateCheckIn, deleteCheckIn, addBiWeeklyCheckIn, updateBiWeeklyCheckIn, deleteBiWeeklyCheckIn }}>
       {loading ? <LoadingScreen /> : children}
     </StoreContext.Provider>
   );

@@ -203,7 +203,7 @@ function CheckInCard({
 
   const leader    = getLeader(ci.leaderId);
   const principle = getPrinciple(ci.selectedPrinciple);
-  const progress  = PROGRESS_CONFIG[ci.progressVersusLastMonth];
+  const progress  = PROGRESS_CONFIG[ci.progressVersusLastMonth] ?? PROGRESS_CONFIG['same'];
 
   function set<K extends keyof CheckIn>(key: K, value: CheckIn[K]) {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -265,6 +265,30 @@ function CheckInCard({
           <p className="text-xs text-gray-400 mt-0.5">Submitted {formatDate(ci.submittedAt)}</p>
         </div>
 
+        {/* ── Action buttons — placed before sparkline so overflow-hidden never clips them ── */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {!editing && (
+            <button
+              type="button"
+              title="Edit"
+              onClick={() => { setEditing(true); setConfirmDelete(false); }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-base
+                         hover:bg-blue-50 transition-colors"
+            >
+              ✏️
+            </button>
+          )}
+          <button
+            type="button"
+            title="Delete"
+            onClick={() => { setConfirmDelete(v => !v); setEditing(false); }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-base
+                       hover:bg-pink-50 transition-colors"
+          >
+            🗑
+          </button>
+        </div>
+
         {/* Evolution sparkline + rating */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <div className="flex flex-col items-end gap-0.5">
@@ -322,33 +346,9 @@ function CheckInCard({
                          transition-all hover:opacity-90"
               style={{ backgroundColor: IBL_NAVY, color: 'white' }}
             >
-              ✉ Send Summary XTEST123
+              ✉ Send Summary
             </button>
           )}
-        </div>
-
-        {/* ── Action buttons ── */}
-        <div className="flex items-center gap-1 flex-shrink-0 ml-1">
-          {!editing && (
-            <button
-              type="button"
-              title="Edit"
-              onClick={() => { setEditing(true); setConfirmDelete(false); }}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-base
-                         hover:bg-blue-50 transition-colors"
-            >
-              ✏️
-            </button>
-          )}
-          <button
-            type="button"
-            title="Delete"
-            onClick={() => { setConfirmDelete(v => !v); setEditing(false); }}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-base
-                       hover:bg-pink-50 transition-colors"
-          >
-            🗑
-          </button>
         </div>
       </div>
 
@@ -846,19 +846,409 @@ function openFocusEmail({
   window.open(`mailto:${toEmail}?subject=${subject}&body=${body}`, '_blank');
 }
 
+// ── Individual bi-weekly check-in row (with edit/delete) ─────────────────────
+
+function BiWeeklyRow({
+  bw,
+  idx,
+  leaderEmail,
+  leaderName,
+  onSave,
+  onDelete,
+}: {
+  bw: BiWeeklyCheckIn;
+  idx: number;
+  leaderEmail: string;
+  leaderName: string;
+  onSave: (updated: BiWeeklyCheckIn) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [form, setForm] = useState<BiWeeklyCheckIn>(bw);
+
+  function set<K extends keyof BiWeeklyCheckIn>(key: K, value: BiWeeklyCheckIn[K]) {
+    setForm(prev => ({ ...prev, [key]: value }));
+  }
+
+  function handleSave() {
+    onSave(form);
+    setEditing(false);
+  }
+
+  function handleCancelEdit() {
+    setForm(bw);
+    setEditing(false);
+  }
+
+  const principle = getPrinciple(bw.principleFocus);
+  const status    = BW_STATUS_CONFIG[bw.status] ?? BW_STATUS_CONFIG['progressing'];
+  const ratingC   = RATING_COLORS[bw.selfRating]      ?? { bg: '#f3f4f6', fg: '#6b7280' };
+  const confC     = RATING_COLORS[bw.confidenceLevel] ?? { bg: '#f3f4f6', fg: '#6b7280' };
+
+  return (
+    <div className={idx % 2 === 1 ? 'bg-slate-50/40' : ''}>
+
+      {/* Delete confirmation banner */}
+      {confirmDelete && (
+        <div className="flex items-center gap-4 px-6 py-3 border-b border-pink-200"
+             style={{ backgroundColor: '#fff0f7' }}>
+          <p className="flex-1 text-sm font-semibold text-gray-800">
+            Delete this check-in?{' '}
+            <span className="font-normal text-gray-500">This cannot be undone.</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => onDelete(bw.id)}
+            className="px-4 py-1.5 rounded-lg text-sm font-bold text-white hover:opacity-90 transition-all"
+            style={{ backgroundColor: IBL_PINK }}
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(false)}
+            className="px-4 py-1.5 rounded-lg text-sm font-semibold text-gray-600 bg-white
+                       border border-gray-200 hover:bg-gray-50 transition-all"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Summary row — div so we can nest buttons inside */}
+      <div
+        className="flex items-center gap-2 px-5 py-3 hover:bg-blue-50/30 transition-colors
+                   border-b border-gray-50 cursor-pointer"
+        onClick={() => { if (!editing) setIsOpen(v => !v); }}
+      >
+        <div className="w-14 flex-shrink-0">
+          <span className="text-sm font-bold" style={{ color: IBL_NAVY }}>Wk {bw.week}</span>
+        </div>
+        <div className="w-24 flex-shrink-0 text-xs text-gray-400">
+          {formatDate(bw.createdAt)}
+        </div>
+        <div className="w-32 flex-shrink-0">
+          {principle ? (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+              P{principle.number} {principle.shortTitle}
+            </span>
+          ) : <span className="text-xs text-gray-300">—</span>}
+        </div>
+        <div className="w-28 flex-shrink-0">
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: status.bg, color: status.fg }}>
+            {status.label}
+          </span>
+        </div>
+        <div className="w-16 flex-shrink-0 text-center">
+          <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: ratingC.bg, color: ratingC.fg }}>
+            {bw.selfRating || '—'}/5
+          </span>
+        </div>
+        <div className="w-20 flex-shrink-0 text-center">
+          <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: confC.bg, color: confC.fg }}>
+            {bw.confidenceLevel || '—'}/5
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-gray-500 truncate">{bw.keyActionsTaken || '—'}</p>
+        </div>
+        <div className="w-20 flex-shrink-0 text-right">
+          {bw.supportNeeded
+            ? <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: '#fff0f7', color: IBL_PINK }}>⚠ Yes</span>
+            : <span className="text-xs text-gray-200">—</span>}
+        </div>
+
+        {/* Action buttons — stopPropagation prevents triggering row expand */}
+        <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+          {!editing && (
+            <button
+              type="button"
+              title="Edit"
+              onClick={() => { setEditing(true); setIsOpen(true); setConfirmDelete(false); }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-base
+                         hover:bg-blue-50 transition-colors"
+            >
+              ✏️
+            </button>
+          )}
+          <button
+            type="button"
+            title="Delete"
+            onClick={() => { setConfirmDelete(v => !v); setEditing(false); }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-base
+                       hover:bg-pink-50 transition-colors"
+          >
+            🗑
+          </button>
+        </div>
+
+        <div className="w-6 flex-shrink-0 text-gray-300 text-xs text-right">
+          {isOpen || editing ? '▲' : '▼'}
+        </div>
+      </div>
+
+      {/* Expanded detail / edit form */}
+      {(isOpen || editing) && (
+        <div className="px-5 py-4 border-b border-gray-100 space-y-4"
+             style={{ backgroundColor: '#f8faff' }}>
+          {editing ? (
+            <div className="space-y-5">
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: IBL_NAVY }}>
+                Editing Bi-Weekly Check-In
+              </p>
+
+              <FormDivider title="Weekly Progress" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <EditInput label="Week" value={form.week} onChange={v => set('week', v)} />
+                <EditTextArea label="Key actions taken" value={form.keyActionsTaken} onChange={v => set('keyActionsTaken', v)} />
+                <EditTextArea label="What went well" value={form.whatWentWell} onChange={v => set('whatWentWell', v)} />
+                <EditTextArea label="Challenges" value={form.challenges} onChange={v => set('challenges', v)} />
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Confidence (1–5)</p>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button key={n} type="button" onClick={() => set('confidenceLevel', n)}
+                              className="w-9 h-9 rounded-full font-bold text-sm transition-all"
+                              style={form.confidenceLevel === n
+                                ? { backgroundColor: IBL_NAVY, color: '#fff' }
+                                : { backgroundColor: '#f3f4f6', color: '#4b5563' }}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Support needed?</p>
+                  <div className="flex gap-2">
+                    {([true, false] as const).map(val => (
+                      <button key={String(val)} type="button" onClick={() => set('supportNeeded', val)}
+                              className="px-4 py-1.5 rounded-lg text-sm font-medium border transition-all"
+                              style={form.supportNeeded === val
+                                ? { backgroundColor: IBL_NAVY, color: '#fff', borderColor: 'transparent' }
+                                : { backgroundColor: '#f9fafb', color: '#6b7280', borderColor: '#e5e7eb' }}>
+                        {val ? 'Yes' : 'No'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {form.supportNeeded && (
+                  <EditTextArea label="Type of support needed" value={form.typeOfSupportNeeded}
+                                onChange={v => set('typeOfSupportNeeded', v)} rows={2} />
+                )}
+              </div>
+
+              <FormDivider title="Principle Focus" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Principle</p>
+                  <select value={form.principleFocus} onChange={e => set('principleFocus', e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                                     focus:outline-none focus:ring-2 focus:ring-[#00D0DA] bg-white">
+                    <option value="">Select a principle...</option>
+                    {PRINCIPLES.map(p => (
+                      <option key={p.id} value={p.id}>P{p.number} — {p.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Status</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {(['on-track', 'progressing', 'needs-attention'] as const).map(v => (
+                      <button key={v} type="button" onClick={() => set('status', v)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
+                              style={form.status === v
+                                ? { backgroundColor: BW_STATUS_CONFIG[v].bg, color: BW_STATUS_CONFIG[v].fg, borderColor: 'transparent' }
+                                : { backgroundColor: '#f9fafb', color: '#6b7280', borderColor: '#e5e7eb' }}>
+                        {BW_STATUS_CONFIG[v].label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <EditTextArea label="Why this principle" value={form.whyThisPrinciple} onChange={v => set('whyThisPrinciple', v)} />
+                <EditTextArea label="Behaviours to practice" value={form.behavioursTopractice} onChange={v => set('behavioursTopractice', v)} />
+                <EditTextArea label="Success measure" value={form.successMeasure} onChange={v => set('successMeasure', v)} rows={2} />
+                <EditInput label="Accountability partner" value={form.accountabilityPartner} onChange={v => set('accountabilityPartner', v)} />
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Self-rating (1–5)</p>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button key={n} type="button" onClick={() => set('selfRating', n)}
+                              className="w-9 h-9 rounded-full font-bold text-sm transition-all"
+                              style={form.selfRating === n
+                                ? { backgroundColor: IBL_NAVY, color: '#fff' }
+                                : { backgroundColor: '#f3f4f6', color: '#4b5563' }}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Manager rating (1–5)</p>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button key={n} type="button" onClick={() => set('managerRating', n)}
+                              className="w-9 h-9 rounded-full font-bold text-sm transition-all"
+                              style={form.managerRating === n
+                                ? { backgroundColor: IBL_NAVY, color: '#fff' }
+                                : { backgroundColor: '#f3f4f6', color: '#4b5563' }}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <EditTextArea label="Overall progress comment" value={form.overallProgressComment} onChange={v => set('overallProgressComment', v)} />
+              </div>
+
+              <FormDivider title="Monthly Reflection" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <EditTextArea label="What I did well" value={form.whatDidWell} onChange={v => set('whatDidWell', v)} />
+                <EditTextArea label="Where I fell short" value={form.whereFellShort} onChange={v => set('whereFellShort', v)} />
+                <EditTextArea label="Concrete example" value={form.concreteExample} onChange={v => set('concreteExample', v)} />
+                <EditTextArea label="Main obstacle" value={form.mainObstacle} onChange={v => set('mainObstacle', v)} rows={2} />
+                <EditTextArea label="Feedback from team" value={form.feedbackFromTeam} onChange={v => set('feedbackFromTeam', v)} />
+                <EditTextArea label="Feedback from manager" value={form.feedbackFromManager} onChange={v => set('feedbackFromManager', v)} />
+                <EditTextArea label="Focus for next month" value={form.focusNextMonth} onChange={v => set('focusNextMonth', v)} rows={3} />
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Next check-in date</p>
+                  <input type="date" value={form.nextCheckInDate} onChange={e => set('nextCheckInDate', e.target.value)}
+                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                                    focus:outline-none focus:ring-2 focus:ring-[#00D0DA]" />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={handleSave}
+                        className="px-5 py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
+                        style={{ backgroundColor: IBL_NAVY }}>
+                  Save Changes
+                </button>
+                <button type="button" onClick={handleCancelEdit}
+                        className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-white
+                                   border border-gray-200 hover:bg-gray-50 transition-all">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormDivider title="Weekly Progress" />
+                <div className="sm:col-span-2" />
+                <TextField label="Key actions taken" value={bw.keyActionsTaken} />
+                <TextField label="What went well"    value={bw.whatWentWell} />
+                <TextField label="Challenges"        value={bw.challenges} />
+                {bw.supportNeeded && (
+                  <div className="p-3 rounded-xl border sm:col-span-2"
+                       style={{ backgroundColor: '#fff8fb', borderColor: `${IBL_PINK}40` }}>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-1"
+                       style={{ color: IBL_PINK }}>Support needed</p>
+                    <p className="text-sm text-gray-800">{bw.typeOfSupportNeeded || '—'}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormDivider title="Principle Focus" />
+                <div className="sm:col-span-2" />
+                <TextField label="Why this principle"      value={bw.whyThisPrinciple} />
+                <TextField label="Behaviours to practice"  value={bw.behavioursTopractice} />
+                <TextField label="Success measure"         value={bw.successMeasure} />
+                <TextField label="Accountability partner"  value={bw.accountabilityPartner} />
+                {bw.overallProgressComment && (
+                  <TextField label="Overall progress comment" value={bw.overallProgressComment} />
+                )}
+              </div>
+
+              {(bw.whatDidWell || bw.whereFellShort || bw.concreteExample || bw.mainObstacle ||
+                bw.feedbackFromTeam || bw.feedbackFromManager || bw.focusNextMonth) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormDivider title="Monthly Reflection" />
+                  <div className="sm:col-span-2" />
+                  <TextField label="What I did well"       value={bw.whatDidWell} />
+                  <TextField label="Where I fell short"    value={bw.whereFellShort} />
+                  <TextField label="Concrete example"      value={bw.concreteExample} />
+                  <TextField label="Main obstacle"         value={bw.mainObstacle} />
+                  <TextField label="Feedback from team"    value={bw.feedbackFromTeam} />
+                  <TextField label="Feedback from manager" value={bw.feedbackFromManager} />
+                  {bw.focusNextMonth && (
+                    <div className="p-3 rounded-xl border-l-4 sm:col-span-2"
+                         style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
+                            Focus for next month
+                          </p>
+                          <p className="text-sm text-gray-800">{bw.focusNextMonth}</p>
+                        </div>
+                        {leaderEmail && (
+                          <button
+                            type="button"
+                            title={`Email this focus to ${leaderName}`}
+                            onClick={() => openFocusEmail({
+                              toEmail: leaderEmail,
+                              leaderName,
+                              week: bw.week,
+                              focus: bw.focusNextMonth,
+                              principleName: (() => {
+                                const p = getPrinciple(bw.principleFocus);
+                                return p ? `P${p.number} — ${p.title}` : bw.principleFocus;
+                              })(),
+                              nextCheckInDate: bw.nextCheckInDate,
+                            })}
+                            className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg
+                                       text-xs font-bold transition-all hover:opacity-90"
+                            style={{ backgroundColor: IBL_NAVY, color: 'white' }}
+                          >
+                            ✉ Send
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {bw.nextCheckInDate && (
+                <p className="text-xs text-gray-400">
+                  Next check-in:{' '}
+                  <span className="font-semibold text-gray-700">
+                    {new Date(bw.nextCheckInDate).toLocaleDateString('en-GB', {
+                      day: 'numeric', month: 'long', year: 'numeric',
+                    })}
+                  </span>
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Per-leader bi-weekly panel ────────────────────────────────────────────────
 
 function LeaderBiWeeklyPanel({
   leader,
   sp,
   bwCheckIns,
+  onSave,
+  onDelete,
 }: {
   leader: { id: string; name: string; initials: string };
   sp: StartingPoint | undefined;
   bwCheckIns: BiWeeklyCheckIn[];
+  onSave: (updated: BiWeeklyCheckIn) => void;
+  onDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   const sorted = [...bwCheckIns].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -963,169 +1353,20 @@ function LeaderBiWeeklyPanel({
             <div className="w-20 flex-shrink-0 text-center">Confidence</div>
             <div className="flex-1">Key Actions</div>
             <div className="w-20 flex-shrink-0 text-right">Support</div>
-            <div className="w-6 flex-shrink-0" />
+            <div className="w-24 flex-shrink-0" />
           </div>
 
-          {sorted.map((bw, idx) => {
-            const principle  = getPrinciple(bw.principleFocus);
-            const status     = BW_STATUS_CONFIG[bw.status] ?? BW_STATUS_CONFIG['progressing'];
-            const ratingC    = RATING_COLORS[bw.selfRating] ?? { bg: '#f3f4f6', fg: '#6b7280' };
-            const confC      = RATING_COLORS[bw.confidenceLevel] ?? { bg: '#f3f4f6', fg: '#6b7280' };
-            const isOpen     = expandedRow === bw.id;
-
-            return (
-              <div key={bw.id} className={idx % 2 === 1 ? 'bg-slate-50/40' : ''}>
-
-                {/* Summary row */}
-                <button
-                  type="button"
-                  onClick={() => setExpandedRow(isOpen ? null : bw.id)}
-                  className="w-full flex items-center gap-2 px-5 py-3 hover:bg-blue-50/30
-                             transition-colors text-left border-b border-gray-50"
-                >
-                  <div className="w-14 flex-shrink-0">
-                    <span className="text-sm font-bold" style={{ color: IBL_NAVY }}>Wk {bw.week}</span>
-                  </div>
-                  <div className="w-24 flex-shrink-0 text-xs text-gray-400">
-                    {formatDate(bw.createdAt)}
-                  </div>
-                  <div className="w-32 flex-shrink-0">
-                    {principle ? (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-                        P{principle.number} {principle.shortTitle}
-                      </span>
-                    ) : <span className="text-xs text-gray-300">—</span>}
-                  </div>
-                  <div className="w-28 flex-shrink-0">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: status.bg, color: status.fg }}>
-                      {status.label}
-                    </span>
-                  </div>
-                  <div className="w-16 flex-shrink-0 text-center">
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: ratingC.bg, color: ratingC.fg }}>
-                      {bw.selfRating || '—'}/5
-                    </span>
-                  </div>
-                  <div className="w-20 flex-shrink-0 text-center">
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: confC.bg, color: confC.fg }}>
-                      {bw.confidenceLevel || '—'}/5
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-500 truncate">{bw.keyActionsTaken || '—'}</p>
-                  </div>
-                  <div className="w-20 flex-shrink-0 text-right">
-                    {bw.supportNeeded
-                      ? <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                              style={{ backgroundColor: '#fff0f7', color: IBL_PINK }}>⚠ Yes</span>
-                      : <span className="text-xs text-gray-200">—</span>}
-                  </div>
-                  <div className="w-6 flex-shrink-0 text-gray-300 text-xs text-right">
-                    {isOpen ? '▲' : '▼'}
-                  </div>
-                </button>
-
-                {/* Expanded detail */}
-                {isOpen && (
-                  <div className="px-5 py-4 border-b border-gray-100 space-y-4"
-                       style={{ backgroundColor: '#f8faff' }}>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormDivider title="Weekly Progress" />
-                      <div className="sm:col-span-2" />
-                      <TextField label="Key actions taken"    value={bw.keyActionsTaken} />
-                      <TextField label="What went well"       value={bw.whatWentWell} />
-                      <TextField label="Challenges"           value={bw.challenges} />
-                      {bw.supportNeeded && (
-                        <div className="p-3 rounded-xl border sm:col-span-2"
-                             style={{ backgroundColor: '#fff8fb', borderColor: `${IBL_PINK}40` }}>
-                          <p className="text-xs font-semibold uppercase tracking-wide mb-1"
-                             style={{ color: IBL_PINK }}>Support needed</p>
-                          <p className="text-sm text-gray-800">{bw.typeOfSupportNeeded || '—'}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormDivider title="Principle Focus" />
-                      <div className="sm:col-span-2" />
-                      <TextField label="Why this principle"       value={bw.whyThisPrinciple} />
-                      <TextField label="Behaviours to practice"   value={bw.behavioursTopractice} />
-                      <TextField label="Success measure"          value={bw.successMeasure} />
-                      <TextField label="Accountability partner"   value={bw.accountabilityPartner} />
-                      {bw.overallProgressComment && (
-                        <TextField label="Overall progress comment" value={bw.overallProgressComment} />
-                      )}
-                    </div>
-
-                    {(bw.whatDidWell || bw.whereFellShort || bw.concreteExample || bw.mainObstacle ||
-                      bw.feedbackFromTeam || bw.feedbackFromManager || bw.focusNextMonth) && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormDivider title="Monthly Reflection" />
-                        <div className="sm:col-span-2" />
-                        <TextField label="What I did well"        value={bw.whatDidWell} />
-                        <TextField label="Where I fell short"     value={bw.whereFellShort} />
-                        <TextField label="Concrete example"       value={bw.concreteExample} />
-                        <TextField label="Main obstacle"          value={bw.mainObstacle} />
-                        <TextField label="Feedback from team"     value={bw.feedbackFromTeam} />
-                        <TextField label="Feedback from manager"  value={bw.feedbackFromManager} />
-                        {bw.focusNextMonth && (
-                          <div className="p-3 rounded-xl border-l-4 sm:col-span-2"
-                               style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
-                                  Focus for next month
-                                </p>
-                                <p className="text-sm text-gray-800">{bw.focusNextMonth}</p>
-                              </div>
-                              {leaderEmail && (
-                                <button
-                                  type="button"
-                                  title={`Email this focus to ${leader.name}`}
-                                  onClick={() => openFocusEmail({
-                                    toEmail: leaderEmail,
-                                    leaderName: leader.name,
-                                    week: bw.week,
-                                    focus: bw.focusNextMonth,
-                                    principleName: (() => {
-                                      const p = getPrinciple(bw.principleFocus);
-                                      return p ? `P${p.number} — ${p.title}` : bw.principleFocus;
-                                    })(),
-                                    nextCheckInDate: bw.nextCheckInDate,
-                                  })}
-                                  className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg
-                                             text-xs font-bold transition-all hover:opacity-90"
-                                  style={{ backgroundColor: IBL_NAVY, color: 'white' }}
-                                >
-                                  ✉ Send
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {bw.nextCheckInDate && (
-                      <p className="text-xs text-gray-400">
-                        Next check-in:{' '}
-                        <span className="font-semibold text-gray-700">
-                          {new Date(bw.nextCheckInDate).toLocaleDateString('en-GB', {
-                            day: 'numeric', month: 'long', year: 'numeric',
-                          })}
-                        </span>
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {sorted.map((bw, idx) => (
+            <BiWeeklyRow
+              key={bw.id}
+              bw={bw}
+              idx={idx}
+              leaderEmail={leaderEmail}
+              leaderName={leader.name}
+              onSave={onSave}
+              onDelete={onDelete}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -1135,7 +1376,7 @@ function LeaderBiWeeklyPanel({
 // ── Main Admin page ───────────────────────────────────────────────────────────
 
 export default function Admin() {
-  const { data, updateCheckIn, deleteCheckIn } = useStore();
+  const { data, updateCheckIn, deleteCheckIn, updateBiWeeklyCheckIn, deleteBiWeeklyCheckIn } = useStore();
   const [filterLeader, setFilterLeader] = useState('');
 
   // ── Overview stats ──────────────────────────────────────────────────────────
@@ -1352,7 +1593,8 @@ export default function Admin() {
             const sp = data.startingPoints.find(s => s.leaderId === leader.id);
             const bwCheckIns = data.biWeeklyCheckIns.filter(b => b.leaderId === leader.id);
             return (
-              <LeaderBiWeeklyPanel key={leader.id} leader={leader} sp={sp} bwCheckIns={bwCheckIns} />
+              <LeaderBiWeeklyPanel key={leader.id} leader={leader} sp={sp} bwCheckIns={bwCheckIns}
+                onSave={updateBiWeeklyCheckIn} onDelete={deleteBiWeeklyCheckIn} />
             );
           })}
         </div>
