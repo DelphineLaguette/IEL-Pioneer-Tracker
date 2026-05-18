@@ -1,8 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { useStore } from '../context/StoreContext';
-import { getLatestSP } from '../context/StoreContext';
 import { LEADERS, getLeader } from '../data/leaders';
-import { PRINCIPLES, getPrinciple } from '../data/principles';
 import type { BiWeeklyCheckIn } from '../types';
 
 const IBL_NAVY = '#002060';
@@ -17,11 +15,7 @@ const CONFIDENCE_LABELS: Record<number, string> = {
   5: 'High — fully confident',
 };
 
-const STATUS_CONFIG = {
-  'on-track':         { label: 'On Track',        bg: '#dcfce7', fg: '#15803d' },
-  'progressing':      { label: 'Progressing',      bg: '#fef9c3', fg: '#a16207' },
-  'needs-attention':  { label: 'Needs Attention',  bg: '#fee2e2', fg: '#b91c1c' },
-};
+const RATING_LABELS: Record<number, string> = { 1: '1', 2: '2', 3: '3', 4: '4', 5: '5' };
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -105,14 +99,8 @@ function SectionHeader({ number, title }: { number: number; title: string }) {
 
 // ── Leader status card ────────────────────────────────────────────────────────
 
-function LeaderCard({
-  leaderId,
-  checkIns,
-  onRecord,
-}: {
-  leaderId: string;
-  checkIns: BiWeeklyCheckIn[];
-  onRecord: (id: string) => void;
+function LeaderCard({ leaderId, checkIns, onRecord }: {
+  leaderId: string; checkIns: BiWeeklyCheckIn[]; onRecord: (id: string) => void;
 }) {
   const leader = getLeader(leaderId)!;
   const sorted = [...checkIns]
@@ -128,9 +116,9 @@ function LeaderCard({
   let countdownColor = '#6b7280';
   let countdownText = nextDate ? `In ${daysUntil}d` : 'Not scheduled';
   if (daysUntil !== null) {
-    if (daysUntil < 0)  { countdownColor = IBL_PINK;  countdownText = 'Overdue'; }
-    else if (daysUntil === 0) { countdownColor = '#d97706'; countdownText = 'Today'; }
-    else if (daysUntil <= 3)  { countdownColor = '#d97706'; countdownText = `In ${daysUntil}d`; }
+    if (daysUntil < 0)         { countdownColor = IBL_PINK;  countdownText = 'Overdue'; }
+    else if (daysUntil === 0)  { countdownColor = '#d97706'; countdownText = 'Today'; }
+    else if (daysUntil <= 3)   { countdownColor = '#d97706'; countdownText = `In ${daysUntil}d`; }
   }
 
   return (
@@ -167,9 +155,13 @@ function LeaderCard({
 
 function HistoryCard({ bw }: { bw: BiWeeklyCheckIn }) {
   const [open, setOpen] = useState(false);
-  const leader    = getLeader(bw.leaderId);
-  const principle = getPrinciple(bw.principleFocus);
-  const status    = STATUS_CONFIG[bw.status];
+  const leader = getLeader(bw.leaderId);
+
+  const periodLabel = bw.periodFrom && bw.periodTo
+    ? `${formatDate(bw.periodFrom)} → ${formatDate(bw.periodTo)}`
+    : bw.periodFrom
+    ? `From ${formatDate(bw.periodFrom)}`
+    : null;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -184,28 +176,23 @@ function HistoryCard({ bw }: { bw: BiWeeklyCheckIn }) {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-gray-900 text-sm">{leader?.name}</span>
               <span className="text-gray-300 text-xs">·</span>
-              <span className="text-xs text-gray-500">Week {bw.week}</span>
-              {principle && (
+              <span className="text-xs text-gray-500">Check-in #{bw.week}</span>
+              {periodLabel && (
                 <>
                   <span className="text-gray-300 text-xs">·</span>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-                    P{principle.number} — {principle.shortTitle}
-                  </span>
+                  <span className="text-xs text-gray-500">{periodLabel}</span>
                 </>
               )}
             </div>
             <p className="text-xs text-gray-400 mt-0.5">{formatDate(bw.createdAt)}</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                  style={{ backgroundColor: status.bg, color: status.fg }}>
-              {status.label}
-            </span>
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-                  style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-              Self {bw.selfRating}/5
-            </span>
+            {bw.selfRating > 0 && (
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                    style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+                Self {bw.selfRating}/5
+              </span>
+            )}
             {bw.supportNeeded && (
               <span className="text-xs font-bold px-2.5 py-1 rounded-full"
                     style={{ backgroundColor: '#fff0f7', color: IBL_PINK }}>
@@ -222,112 +209,77 @@ function HistoryCard({ bw }: { bw: BiWeeklyCheckIn }) {
 
       {open && (
         <div className="border-t border-gray-100 px-5 py-4 space-y-4">
-          {/* Part 1 */}
+          {/* Bi-Weekly Check-in */}
           <div>
             <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: IBL_NAVY }}>
-              Weekly Progress — Week {bw.week}
+              Bi-Weekly Check-in
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { label: 'Key actions taken',  value: bw.keyActionsTaken },
-                { label: 'What went well',     value: bw.whatWentWell },
-                { label: 'Challenges',         value: bw.challenges },
+                { label: 'Key actions taken',      value: bw.keyActionsTaken },
+                { label: 'What went well',         value: bw.whatWentWell },
+                { label: 'Challenges',             value: bw.challenges },
+                { label: 'Concrete example',       value: bw.concreteExample },
+                { label: 'Main obstacle',          value: bw.mainObstacle },
+                { label: 'Feedback from team',     value: bw.feedbackFromTeam },
+                { label: 'Feedback from manager',  value: bw.feedbackFromManager },
+                { label: 'Focus for next 2 weeks', value: bw.focusNextMonth },
               ].map(({ label, value }) => value ? (
                 <div key={label} className="p-3 rounded-xl bg-slate-50">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
                   <p className="text-sm text-gray-800 leading-relaxed">{value}</p>
                 </div>
               ) : null)}
-              <div className="p-3 rounded-xl bg-slate-50">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Confidence level</p>
-                <p className="text-sm font-bold" style={{ color: IBL_NAVY }}>
-                  {bw.confidenceLevel}/5 — {CONFIDENCE_LABELS[bw.confidenceLevel]}
-                </p>
-              </div>
-              {bw.supportNeeded && bw.typeOfSupportNeeded && (
-                <div className="p-3 rounded-xl sm:col-span-2"
-                     style={{ backgroundColor: '#fff8fb', border: `1px solid ${IBL_PINK}40` }}>
-                  <p className="text-xs font-semibold mb-1" style={{ color: IBL_PINK }}>Support needed</p>
-                  <p className="text-sm text-gray-800">{bw.typeOfSupportNeeded}</p>
+              {bw.confidenceLevel > 0 && (
+                <div className="p-3 rounded-xl bg-slate-50">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Confidence level</p>
+                  <p className="text-sm font-bold" style={{ color: IBL_NAVY }}>
+                    {bw.confidenceLevel}/5 — {CONFIDENCE_LABELS[bw.confidenceLevel]}
+                  </p>
                 </div>
               )}
             </div>
-          </div>
-          {/* Part 2 */}
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: IBL_NAVY }}>
-              Principle Focus
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-xl bg-slate-50">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Principle</p>
-                <p className="text-sm font-semibold text-gray-800">
-                  {principle ? `P${principle.number} — ${principle.shortTitle}` : bw.principleFocus || '—'}
-                </p>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Status</p>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full inline-block"
-                      style={{ backgroundColor: status.bg, color: status.fg }}>
-                  {status.label}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Self rating</p>
-                <p className="text-lg font-extrabold" style={{ color: IBL_NAVY }}>{bw.selfRating}/5</p>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Manager rating</p>
-                <p className="text-lg font-extrabold" style={{ color: IBL_CYAN }}>{bw.managerRating > 0 ? `${bw.managerRating}/5` : '—'}</p>
-              </div>
-            </div>
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                { label: 'Why this principle this month?', value: bw.whyThisPrinciple },
-                { label: '3 behaviours I will practice',  value: bw.behavioursTopractice },
-                { label: 'Success measure',               value: bw.successMeasure },
-                { label: 'Accountability partner',        value: bw.accountabilityPartner },
-              ].map(({ label, value }) => value ? (
-                <div key={label} className="p-3 rounded-xl bg-slate-50">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
-                  <p className="text-sm text-gray-800 leading-relaxed">{value}</p>
-                </div>
-              ) : null)}
-            </div>
-            {bw.overallProgressComment && (
-              <div className="mt-3 p-3 rounded-xl border-l-4"
-                   style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
-                <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
-                  Overall progress comment
-                </p>
-                <p className="text-sm text-gray-800">{bw.overallProgressComment}</p>
+            {bw.supportNeeded && bw.typeOfSupportNeeded && (
+              <div className="mt-3 p-3 rounded-xl"
+                   style={{ backgroundColor: '#fff8fb', border: `1px solid ${IBL_PINK}40` }}>
+                <p className="text-xs font-semibold mb-1" style={{ color: IBL_PINK }}>Support needed</p>
+                <p className="text-sm text-gray-800">{bw.typeOfSupportNeeded}</p>
               </div>
             )}
           </div>
-          {/* Part 3 */}
-          {(bw.whatDidWell || bw.whereFellShort || bw.concreteExample || bw.mainObstacle || bw.feedbackFromTeam || bw.feedbackFromManager || bw.focusNextMonth) && (
+
+          {/* Sign-off */}
+          {(bw.selfRating > 0 || bw.managerRating > 0 || bw.overallProgressComment) && (
             <div>
               <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: IBL_NAVY }}>
-                Monthly Reflection
+                Sign-off
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  { label: 'What I did well this month', value: bw.whatDidWell },
-                  { label: 'Where I fell short',         value: bw.whereFellShort },
-                  { label: 'Concrete example',           value: bw.concreteExample },
-                  { label: 'Main obstacle',              value: bw.mainObstacle },
-                  { label: 'Feedback from team',         value: bw.feedbackFromTeam },
-                  { label: 'Feedback from manager',      value: bw.feedbackFromManager },
-                  { label: 'Focus for next 30 days',     value: bw.focusNextMonth },
-                ].map(({ label, value }) => value ? (
-                  <div key={label} className="p-3 rounded-xl bg-slate-50">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
-                    <p className="text-sm text-gray-800 leading-relaxed">{value}</p>
-                  </div>
-                ) : null)}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-slate-50">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Self rating</p>
+                  <p className="text-lg font-extrabold" style={{ color: IBL_NAVY }}>
+                    {bw.selfRating > 0 ? `${bw.selfRating}/5` : '—'}
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Manager rating</p>
+                  <p className="text-lg font-extrabold" style={{ color: IBL_CYAN }}>
+                    {bw.managerRating > 0 ? `${bw.managerRating}/5` : '—'}
+                  </p>
+                </div>
               </div>
+              {bw.overallProgressComment && (
+                <div className="mt-3 p-3 rounded-xl border-l-4"
+                     style={{ backgroundColor: '#eff6ff', borderLeftColor: IBL_CYAN }}>
+                  <p className="text-xs font-bold uppercase tracking-wide mb-1 text-blue-700">
+                    Overall progress comment
+                  </p>
+                  <p className="text-sm text-gray-800">{bw.overallProgressComment}</p>
+                </div>
+              )}
             </div>
           )}
+
           {bw.nextCheckInDate && (
             <p className="text-xs text-gray-400">
               Next check-in: <span className="font-semibold text-gray-700">{formatDateLong(bw.nextCheckInDate)}</span>
@@ -342,22 +294,22 @@ function HistoryCard({ bw }: { bw: BiWeeklyCheckIn }) {
 // ── Email helper ──────────────────────────────────────────────────────────────
 
 function sendBiWeeklySummaryEmail(bw: BiWeeklyCheckIn, leaderName: string, leaderEmail: string) {
-  const principle = getPrinciple(bw.principleFocus);
-  const principleName = principle ? `P${principle.number} — ${principle.title}` : bw.principleFocus || '—';
   const nextDate = bw.nextCheckInDate
     ? new Date(bw.nextCheckInDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
     : '—';
-  const subject = encodeURIComponent(`Your Bi-Weekly Check-In Summary — Week ${bw.week}`);
+  const periodStr = bw.periodFrom && bw.periodTo
+    ? `${new Date(bw.periodFrom).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} – ${new Date(bw.periodTo).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
+    : `Check-in #${bw.week}`;
+  const subject = encodeURIComponent(`Your Bi-Weekly Check-In Summary — ${periodStr}`);
   const body = encodeURIComponent(
     `Dear ${leaderName},\n\n` +
-    `Thank you for your bi-weekly check-in (Week ${bw.week}).\n\n` +
+    `Thank you for your bi-weekly check-in (${periodStr}).\n\n` +
     `Here is a summary:\n\n` +
     `──────────────────────────\n` +
-    `Principle in focus: ${principleName}\n` +
-    `Status: ${bw.status}\n` +
-    `Self-rating: ${bw.selfRating}/5\n` +
-    `Confidence level: ${bw.confidenceLevel}/5\n` +
-    (bw.focusNextMonth ? `Focus for next 30 days:\n${bw.focusNextMonth}\n` : '') +
+    `Self-rating: ${bw.selfRating > 0 ? `${bw.selfRating}/5` : 'Not yet assessed'}\n` +
+    `Manager rating: ${bw.managerRating > 0 ? `${bw.managerRating}/5` : 'Not yet assessed'}\n` +
+    `Confidence level: ${bw.confidenceLevel}/5 — ${CONFIDENCE_LABELS[bw.confidenceLevel] ?? ''}\n` +
+    (bw.focusNextMonth ? `\nFocus for next 2 weeks:\n${bw.focusNextMonth}\n` : '') +
     `──────────────────────────\n\n` +
     `Next check-in: ${nextDate}\n\n` +
     `Keep up the great work!\n\n` +
@@ -372,12 +324,21 @@ function buildDefault(leaderId: string): Omit<BiWeeklyCheckIn, 'id' | 'createdAt
   return {
     leaderId,
     week: '1',
+    periodFrom: '',
+    periodTo: '',
     keyActionsTaken: '',
     whatWentWell: '',
     challenges: '',
+    concreteExample: '',
+    mainObstacle: '',
     supportNeeded: false,
     typeOfSupportNeeded: '',
     confidenceLevel: 0,
+    feedbackFromTeam: '',
+    feedbackFromManager: '',
+    focusNextMonth: '',
+    nextCheckInDate: addDays(14),
+    // kept for type compatibility with existing stored data
     principleFocus: '',
     whyThisPrinciple: '',
     behavioursTopractice: '',
@@ -389,12 +350,6 @@ function buildDefault(leaderId: string): Omit<BiWeeklyCheckIn, 'id' | 'createdAt
     overallProgressComment: '',
     whatDidWell: '',
     whereFellShort: '',
-    concreteExample: '',
-    mainObstacle: '',
-    feedbackFromTeam: '',
-    feedbackFromManager: '',
-    focusNextMonth: '',
-    nextCheckInDate: addDays(14),
   };
 }
 
@@ -405,7 +360,7 @@ export default function BiWeeklyCheckInPage() {
   const [form, setForm]           = useState(() => buildDefault(''));
   const [savedBW, setSavedBW]     = useState<BiWeeklyCheckIn | null>(null);
 
-  function set<K extends keyof typeof form>(key: K, value: typeof form[K]) {
+  function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm(prev => ({ ...prev, [key]: value }));
   }
 
@@ -435,6 +390,10 @@ export default function BiWeeklyCheckInPage() {
 
   const supportFlags = data.biWeeklyCheckIns.filter(b => b.supportNeeded).length;
 
+  const todayLabel = new Date().toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+
   return (
     <div className="space-y-6">
 
@@ -457,9 +416,9 @@ export default function BiWeeklyCheckInPage() {
       {/* ── Stats ── */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Total Check-Ins', value: data.biWeeklyCheckIns.length, color: IBL_NAVY },
-          { label: 'Support Flags',   value: supportFlags,                  color: IBL_PINK },
-          { label: 'Leaders Tracked', value: new Set(data.biWeeklyCheckIns.map(b => b.leaderId)).size, color: IBL_CYAN },
+          { label: 'Total Check-Ins', value: data.biWeeklyCheckIns.length,                                    color: IBL_NAVY },
+          { label: 'Support Flags',   value: supportFlags,                                                     color: IBL_PINK },
+          { label: 'Leaders Tracked', value: new Set(data.biWeeklyCheckIns.map(b => b.leaderId)).size,         color: IBL_CYAN },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
             <p className="text-3xl font-extrabold" style={{ color: s.color }}>{s.value}</p>
@@ -528,7 +487,7 @@ export default function BiWeeklyCheckInPage() {
                style={{ background: `linear-gradient(135deg, ${IBL_NAVY}08 0%, ${IBL_CYAN}12 100%)` }}>
             <div>
               <h2 className="font-bold text-gray-900">Record Bi-Weekly Check-In</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Fill in both parts below</p>
+              <p className="text-xs text-gray-400 mt-0.5">{todayLabel}</p>
             </div>
             <button type="button" onClick={() => setShowForm(false)}
                     className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
@@ -536,8 +495,8 @@ export default function BiWeeklyCheckInPage() {
 
           <form onSubmit={handleSubmit} className="p-6 space-y-8">
 
-            {/* Leader + Week */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* ── Header fields ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Leader" required>
                 <select
                   value={form.leaderId}
@@ -550,26 +509,42 @@ export default function BiWeeklyCheckInPage() {
                   {LEADERS.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </Field>
-              <Field label="Week">
-                <select
+              <Field label="Check-in number">
+                <input
+                  type="number"
+                  min="1"
                   value={form.week}
                   onChange={e => set('week', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white
-                             focus:outline-none focus:ring-2 focus:ring-[#00D0DA]"
-                >
-                  {Array.from({ length: 100 }, (_, i) => String(i + 1)).map(w => (
-                    <option key={w} value={w}>Week {w}</option>
-                  ))}
-                </select>
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent"
+                />
+              </Field>
+              <Field label="Period from">
+                <input
+                  type="date"
+                  value={form.periodFrom ?? ''}
+                  onChange={e => set('periodFrom', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent"
+                />
+              </Field>
+              <Field label="Period to">
+                <input
+                  type="date"
+                  value={form.periodTo ?? ''}
+                  onChange={e => set('periodTo', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent"
+                />
               </Field>
             </div>
 
-            {/* Part 1 */}
+            {/* ── Section 1: Bi-Weekly Check-in ── */}
             <div className="space-y-4">
-              <SectionHeader number={1} title="Weekly Progress" />
+              <SectionHeader number={1} title="Bi-Weekly Check-in" />
               <Field label="Key actions taken">
                 <TextArea value={form.keyActionsTaken} onChange={v => set('keyActionsTaken', v)}
-                          placeholder="What leadership actions did the pioneer take this week?" />
+                          placeholder="What leadership actions did the pioneer take these 2 weeks?" />
               </Field>
               <Field label="What went well">
                 <TextArea value={form.whatWentWell} onChange={v => set('whatWentWell', v)}
@@ -578,6 +553,14 @@ export default function BiWeeklyCheckInPage() {
               <Field label="Challenges">
                 <TextArea value={form.challenges} onChange={v => set('challenges', v)}
                           placeholder="Obstacles, tensions, or areas where they struggled…" />
+              </Field>
+              <Field label="Concrete example" hint="A specific situation that illustrates the challenge or progress above">
+                <TextArea value={form.concreteExample} onChange={v => set('concreteExample', v)}
+                          placeholder="Describe a concrete example…" rows={2} />
+              </Field>
+              <Field label="Main obstacle">
+                <TextArea value={form.mainObstacle} onChange={v => set('mainObstacle', v)}
+                          placeholder="What got in the way most these 2 weeks?" rows={2} />
               </Field>
               <Field label="Confidence level (1 = low, 5 = high)">
                 <RatingButtons value={form.confidenceLevel} onChange={v => set('confidenceLevel', v)}
@@ -602,99 +585,17 @@ export default function BiWeeklyCheckInPage() {
                             placeholder="Describe the support that would help most…" rows={2} />
                 </Field>
               )}
-            </div>
-
-            {/* Part 2 */}
-            <div className="space-y-4">
-              <SectionHeader number={2} title="Principle Focus" />
-              <Field label="Selected leadership principle">
-                <select
-                  value={form.principleFocus}
-                  onChange={e => set('principleFocus', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white
-                             focus:outline-none focus:ring-2 focus:ring-[#00D0DA]"
-                >
-                  <option value="">Select principle…</option>
-                  {PRINCIPLES.map(p => (
-                    <option key={p.id} value={p.id}>P{p.number} — {p.title}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Why this principle this month?">
-                <TextArea value={form.whyThisPrinciple} onChange={v => set('whyThisPrinciple', v)}
-                          placeholder="What makes this principle the right focus right now?" />
-              </Field>
-              <Field label="3 behaviours I will practice">
-                <TextArea value={form.behavioursTopractice} onChange={v => set('behavioursTopractice', v)}
-                          placeholder="List the 3 specific behaviours you commit to practising…" />
-              </Field>
-              <Field label="Success measure">
-                <TextArea value={form.successMeasure} onChange={v => set('successMeasure', v)}
-                          placeholder="How will you know you've been successful?" rows={2} />
-              </Field>
-              <Field label="Accountability partner">
-                <TextArea value={form.accountabilityPartner} onChange={v => set('accountabilityPartner', v)}
-                          placeholder="Who will hold you accountable?" rows={2} />
-              </Field>
-              <Field label="Status">
-                <div className="flex gap-2 flex-wrap">
-                  {(Object.entries(STATUS_CONFIG) as [BiWeeklyCheckIn['status'], typeof STATUS_CONFIG[keyof typeof STATUS_CONFIG]][]).map(([val, cfg]) => (
-                    <button key={val} type="button" onClick={() => set('status', val)}
-                            className="px-4 py-2 rounded-lg border text-sm font-semibold transition-all"
-                            style={form.status === val
-                              ? { backgroundColor: cfg.bg, color: cfg.fg, border: `1px solid ${cfg.fg}40` }
-                              : { backgroundColor: '#f9fafb', color: '#6b7280', border: '1px solid #e5e7eb' }}>
-                      {cfg.label}
-                    </button>
-                  ))}
-                </div>
-              </Field>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Self-rating (1–5)">
-                  <RatingButtons value={form.selfRating} onChange={v => set('selfRating', v)}
-                                 labels={{ 1:'1', 2:'2', 3:'3', 4:'4', 5:'5' }} />
-                </Field>
-                <Field label="Manager rating (1–5)" hint="Leave at 0 if not yet assessed">
-                  <RatingButtons value={form.managerRating} onChange={v => set('managerRating', v)}
-                                 labels={{ 1:'1', 2:'2', 3:'3', 4:'4', 5:'5' }} />
-                </Field>
-              </div>
-              <Field label="Overall progress comment">
-                <TextArea value={form.overallProgressComment} onChange={v => set('overallProgressComment', v)}
-                          placeholder="Summarise the leader's overall progress this fortnight…" />
-              </Field>
-            </div>
-
-            {/* Part 3 */}
-            <div className="space-y-4">
-              <SectionHeader number={3} title="Monthly Reflection" />
-              <Field label="What I did well this month">
-                <TextArea value={form.whatDidWell} onChange={v => set('whatDidWell', v)}
-                          placeholder="Achievements and positive moments worth acknowledging…" />
-              </Field>
-              <Field label="Where I fell short">
-                <TextArea value={form.whereFellShort} onChange={v => set('whereFellShort', v)}
-                          placeholder="Areas where you didn't meet your own expectations…" />
-              </Field>
-              <Field label="Concrete example">
-                <TextArea value={form.concreteExample} onChange={v => set('concreteExample', v)}
-                          placeholder="A specific situation that illustrates your progress or challenge…" />
-              </Field>
-              <Field label="Main obstacle">
-                <TextArea value={form.mainObstacle} onChange={v => set('mainObstacle', v)}
-                          placeholder="What got in the way most this month?" rows={2} />
-              </Field>
               <Field label="Feedback from team">
                 <TextArea value={form.feedbackFromTeam} onChange={v => set('feedbackFromTeam', v)}
-                          placeholder="What feedback have you received from your team?" />
+                          placeholder="What feedback has the pioneer received from their team?" />
               </Field>
               <Field label="Feedback from manager">
                 <TextArea value={form.feedbackFromManager} onChange={v => set('feedbackFromManager', v)}
-                          placeholder="What feedback have you received from your manager?" />
+                          placeholder="What feedback has the pioneer received from their manager?" />
               </Field>
-              <Field label="Focus for next 30 days">
+              <Field label="Focus for next 2 weeks">
                 <TextArea value={form.focusNextMonth} onChange={v => set('focusNextMonth', v)}
-                          placeholder="What is your main leadership focus for the next 30 days?" />
+                          placeholder="What is the main leadership focus for the next 2 weeks?" />
               </Field>
               <Field label="Next check-in date">
                 <input
@@ -704,6 +605,25 @@ export default function BiWeeklyCheckInPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
                              focus:outline-none focus:ring-2 focus:ring-[#00D0DA] focus:border-transparent"
                 />
+              </Field>
+            </div>
+
+            {/* ── Section 2: Sign-off ── */}
+            <div className="space-y-4">
+              <SectionHeader number={2} title="Sign-off" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Self-rating (1–5)">
+                  <RatingButtons value={form.selfRating} onChange={v => set('selfRating', v)}
+                                 labels={RATING_LABELS} />
+                </Field>
+                <Field label="Manager rating (1–5)" hint="Leave at 0 if not yet assessed">
+                  <RatingButtons value={form.managerRating} onChange={v => set('managerRating', v)}
+                                 labels={RATING_LABELS} />
+                </Field>
+              </div>
+              <Field label="Overall progress comment">
+                <TextArea value={form.overallProgressComment} onChange={v => set('overallProgressComment', v)}
+                          placeholder="Summarise the pioneer's overall progress this fortnight…" />
               </Field>
             </div>
 
